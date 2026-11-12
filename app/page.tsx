@@ -1,547 +1,604 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Volume2, VolumeX, Mic, MicOff, ArrowRight, Play, Check } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowRight,
+  Brain,
+  Check,
+  Lightbulb,
+  Mic,
+  MicOff,
+  Play,
+  RotateCcw,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
+import {
+  CATEGORY_LABELS,
+  INTERESTS,
+  PARTS,
+  PHASE_LABELS,
+  START_ADAPT,
+  adapt,
+  affectsLevel,
+  buildSteps,
+  isSupportFree,
+  paragraphsFor,
+  plainText,
+  type AdaptState,
+  type Outcome,
+} from "./lesson/flow";
+import type {
+  ChoiceTask,
+  Interest,
+  LessonStep,
+  Level,
+  OptionId,
+  Phase,
+  QuestionCategory,
+  ThinkAloudTask,
+} from "./lesson/types";
 
-export type QuestionCategory = "texttyp" | "pa_raderna" | "mellan_raderna" | "sammanfatta" | "resonera";
+// ============================================================================
+// Hjälptyper
+// ============================================================================
 
-export type StepType = "choice" | "free_text" | "dictation" | "final_exam";
-
-export type LessonStep = {
-  id: string;
-  partHeader: string;
-  progressPercent: number;
-  category: QuestionCategory;
-  stepType: StepType;
-  sideText: {
-    title: string;
-    body: string;
-    highlightPhrase?: string;
-  };
-  boardPrompt: string;
-  options?: { id: "A" | "B"; text: string; isCorrect: boolean }[];
-  placeholder?: string;
-  correctFeedback: string;
-  incorrectFeedback: string;
-  rubricCriterion?: string;
+type BoardEntry = {
+  sender: "teacher" | "student";
+  text: string;
+  tone?: "feedback" | "hint" | "note";
+  ok?: boolean;
+  strength?: string;
+  nextStep?: string;
 };
 
-const ALL_STEPS: LessonStep[] = [
-  // ==========================================
-  // DEL 1: TEXTTYPERS DRAG
-  // ==========================================
-  {
-    id: "del1_val",
-    partHeader: "DEL 1: TEXTTYPERS SÄRDRAG (MODELLERING & TILLÄMPNING)",
-    progressPercent: 8,
-    category: "texttyp",
-    stepType: "choice",
-    sideText: {
-      title: "Utdrag: Insändare i lokaltidningen",
-      body: "Hur länge ska kommunen ignorera ungdomars behov av mötesplatser? Att stänga fritidsgården i centrum är ett svek mot ungas trygghet och hälsa. Vi kräver att beslutet rivs upp omgående så att alla har en meningsfull fritid!",
-      highlightPhrase: "Vi kräver att beslutet rivs upp omgående",
-    },
-    boardPrompt:
-      "Titta på texten till höger. Vilket specifikt drag visar att detta är en debattartikel/insändare och inte en neutral nyhetstext?",
-    options: [
-      { id: "A", text: "Den driver en tydlig tes och vill påverka läsaren.", isCorrect: true },
-      { id: "B", text: "Den beskriver en objektiv händelse utan att ta ställning.", isCorrect: false },
-    ],
-    correctFeedback:
-      "Korrekt, svar A! Texten driver en tydlig tes ('Vi kräver att beslutet rivs upp') med syftet att väcka opinion.",
-    incorrectFeedback:
-      "Svar A är rätt. En nyhetsartikel är neutral, medan denna text aktivt tar ställning och driver ett krav.",
-  },
-  {
-    id: "del1_recall",
-    partHeader: "DEL 1: ÅTERKALLNING & METAKOGNITION",
-    progressPercent: 16,
-    category: "texttyp",
-    stepType: "free_text",
-    sideText: {
-      title: "Utdrag: Insändare i lokaltidningen",
-      body: "Hur länge ska kommunen ignorera ungdomars behov av mötesplatser? Att stänga fritidsgården i centrum är ett svek mot ungas trygghet och hälsa. Vi kräver att beslutet rivs upp omgående så att alla har en meningsfull fritid!",
-    },
-    boardPrompt:
-      "Återkalla nu ur minnet: Förklara med egna ord vad en 'tes' är och hur du gjorde för att upptäcka den i texten. Tyckte du något var svårt?",
-    placeholder: "En tes är... Jag hittade den genom att...",
-    correctFeedback: "Klok reflektion! Du fångar att tesen är själva kärnan och kravet som texten vill bevisa.",
-    incorrectFeedback: "Tänk på att tesen alltid är den centrala åsikten eller kravet som författaren vill övertyga om.",
-    rubricCriterion: "Förstå begreppet tes och metakognitivt beskriva lässtrategin.",
-  },
+type Evaluation = {
+  passed: boolean;
+  strength: string;
+  nextStep: string;
+  boardFeedback: string;
+};
 
-  // ==========================================
-  // DEL 2: LÄSTEKNIK (PÅ & MELLAN RADERNA)
-  // ==========================================
-  {
-    id: "del2_val",
-    partHeader: "DEL 2: LÄSTEKNIK (PÅ & MELLAN RADERNA)",
-    progressPercent: 25,
-    category: "pa_raderna",
-    stepType: "choice",
-    sideText: {
-      title: "Utdrag: Superintelligensens framfart",
-      body: "Filosofen Nick Bostrom liknar vårt framtida öde vid gorillornas: vår existens skulle helt bero på superintelligensens godtycke. Matematikprofessorn Olle Häggström understryker att en superintelligent maskin varken behöver älska eller hata oss – ser den människan som ett hinder eller en resurs av atomer kan den enkelt göra sig av med oss.",
-      highlightPhrase: "liknar vårt framtida öde vid gorillornas",
-    },
-    boardPrompt: "Vems öde liknar filosofen Nick Bostrom människans framtid vid?",
-    options: [
-      { id: "A", text: "Kärnvapnens öde", isCorrect: false },
-      { id: "B", text: "Gorillornas öde", isCorrect: true },
-    ],
-    correctFeedback: "Bra! Du svarade rätt, svar B. Här läste du direkt PÅ raderna – svaret stod utskrivet i texten.",
-    incorrectFeedback: "Det stod ordagrant i första meningen: 'vid gorillornas'. Svar B är att läsa på raderna.",
-  },
-  {
-    id: "del2_mikrostopp",
-    partHeader: "DEL 2: MIKROSTOPP – LÄSA MELLAN RADERNA",
-    progressPercent: 34,
-    category: "mellan_raderna",
-    stepType: "free_text",
-    sideText: {
-      title: "Utdrag: Superintelligensens framfart",
-      body: "Maskinen behöver varken älska eller hata oss – ser den människan som ett hinder eller en resurs av atomer kan den enkelt göra sig av med oss.",
-    },
-    boardPrompt:
-      "Mikrostopp: Vad menar författaren MELLAN raderna med att maskinen inte behöver 'hata oss' för att utplåna oss? Tolka med 1–2 meningar.",
-    placeholder: "Mellan raderna menas att maskinen inte styrs av känslor, utan...",
-    correctFeedback: "Utmärkt läst! Du ser att hotet är ren kyla och likgiltighet inför mänskligt liv, inte personligt hat.",
-    incorrectFeedback: "Poängen mellan raderna är att maskinen är likgiltig – vi är bara byggstenar eller hinder i dess kalkyl.",
-    rubricCriterion: "Dra underbyggda slutsatser genom inferensläsning (läsa mellan raderna).",
-  },
-  {
-    id: "del2_check",
-    partHeader: "DEL 2: KONTROLL AV LÄSTEKNIK",
-    progressPercent: 42,
-    category: "mellan_raderna",
-    stepType: "choice",
-    sideText: {
-      title: "Begreppskoll",
-      body: "När vi läser på raderna hämtar vi information direkt ur texten. När vi läser mellan raderna kombinerar vi textens ledtrådar med egna logiska slutsatser.",
-    },
-    boardPrompt: "Vilken lästeknik använde du nyss när du tolkade maskinens likgiltighet?",
-    options: [
-      { id: "A", text: "Att läsa på raderna (faktasökning).", isCorrect: false },
-      { id: "B", text: "Att läsa mellan raderna (dra egna slutsatser från ledtrådar).", isCorrect: true },
-    ],
-    correctFeedback: "Exakt, svar B! Du gjorde en inferens: du lade ihop textens ord med din egen förståelse.",
-    incorrectFeedback: "Svar B är rätt. Eftersom likgiltigheten inte stod uttryckligen läste du mellan raderna.",
-  },
+type CategoryStats = { answered: number; correct: number; supported: number; times: number[] };
 
-  // ==========================================
-  // DEL 3: SAMMANFATTA DET VIKTIGASTE
-  // ==========================================
-  {
-    id: "del3_model",
-    partHeader: "DEL 3: SAMMANFATTA KÄRNAN (MODELLERING: FACIT FÖRST)",
-    progressPercent: 50,
-    category: "sammanfatta",
-    stepType: "choice",
-    sideText: {
-      title: "Utdrag: Global reglering",
-      body: "För att förhindra riskerna krävs bindande globala regelverk innan tekniken springer ifrån oss. Samtidigt visar historien att stormakter sällan avbryter en teknisk kapprustning frivilligt förrän en kris redan har inträffat.",
-    },
-    boardPrompt:
-      "Titta på två elevsvar som sammanfattar texten mot kursmålet 'plocka ut relevant information':\n\nElevsvar 1: 'Den handlar om stormakter som bråkar om teknik.' (För ytligt)\nElevsvar 2: 'Texten varnar för att vi måste reglera AI globalt i förväg, trots att historien visar hur svårt det är att enas i tid.' (Toppresultat)\n\nVilket svar når toppresultatet?",
-    options: [
-      { id: "A", text: "Elevsvar 1", isCorrect: false },
-      { id: "B", text: "Elevsvar 2", isCorrect: true },
-    ],
-    correctFeedback: "Klockrent, svar B! Det lyfter fram både förslaget (reglering) och det historiska hindret.",
-    incorrectFeedback: "Svar B når målet. Elevsvar 1 är för svepande och missar textens faktiska kärnkonflikt.",
-  },
-  {
-    id: "del3_practice",
-    partHeader: "DEL 3: EGEN SAMMANFATTNING MED FORMATIV FEEDBACK",
-    progressPercent: 58,
-    category: "sammanfatta",
-    stepType: "free_text",
-    sideText: {
-      title: "Utdrag: Algoritmernas makt i skolan",
-      body: "När artificiell intelligens integreras i undervisningen kan varje elev få individanpassade övningar i realtid. Baksidan är dock att elever riskerar att förlora förmågan till långsiktig uthållighet och djupkoncentration när korta, snabba digitala belöningar tar över lärmiljön.",
-    },
-    boardPrompt: "Din tur på ett nytt textstycke! Sammanfatta texten ovan med EN enda kärnfull mening.",
-    placeholder: "Sammanfatta både möjligheten och baksidan i en mening...",
-    correctFeedback: "Väl sammanfattat! Du fångade balansen mellan den anpassade hjälpen och risken för tappad uthållighet.",
-    incorrectFeedback: "Försök få med båda sidorna: Den pedagogiska anpassningen OCH risken för bristande uthållighet.",
-    rubricCriterion: "Formulera en precis och relevant sammanfattning av textens kärna.",
-  },
-  {
-    id: "del3_recall",
-    partHeader: "DEL 3: ÅTERKALLA SAMMANFATTNINGSTEKNIK",
-    progressPercent: 65,
-    category: "sammanfatta",
-    stepType: "choice",
-    sideText: {
-      title: "Kursmål: Sammanfattning",
-      body: "En god sammanfattning återger huvudtanken utan att förlora sig i enskilda detaljer eller egna åsikter.",
-    },
-    boardPrompt: "Vad är den gyllene regeln när du sammanfattar en text utan stöd?",
-    options: [
-      { id: "A", text: "Skriva ner så många detaljer och citat som möjligt.", isCorrect: false },
-      { id: "B", text: "Sålla bort detaljer och formulera textens bärande huvudtanke.", isCorrect: true },
-    ],
-    correctFeedback: "Helt rätt, svar B! Du sållar och behåller kärnan.",
-    incorrectFeedback: "Svar B är rätt. En sammanfattning ska skala bort detaljerna till förmån för huvudtanken.",
-  },
+const CATEGORIES = Object.keys(CATEGORY_LABELS) as QuestionCategory[];
 
-  // ==========================================
-  // DEL 4: RESONERANDE SVAR
-  // ==========================================
-  {
-    id: "del4_model",
-    partHeader: "DEL 4: RESONERANDE SVAR (MODELLERING: TÄNKA HÖGT)",
-    progressPercent: 73,
-    category: "resonera",
-    stepType: "choice",
-    sideText: {
-      title: "Utdrag: Dilemmat med skärmpaus",
-      body: "Om en enskild nation pausar sin AI-utveckling för att bygga säkerhetsspärrar riskerar den att halka efter konkurrenter som struntar i etiken. Detta skapar en farlig kapplöpning där säkerhet offras för snabbhet.",
-    },
-    boardPrompt:
-      "Titta på lärarens 'tänka högt'-modellering av ett utvecklat resonemang:\n\nSvar 1: 'Säkerheten offras för att länder vill vinna.' (Enkelt påstående)\nSvar 2: 'Eftersom ingen vill hamna på efterkälken vågar länder inte sakta ner, vilket leder till att nödvändiga säkerhetskontroller ignoreras till förmån för snabbhet.' (Utvecklat i flera led)\n\nVilket svar visar ett utvecklat resonemang?",
-    options: [
-      { id: "A", text: "Svar 1", isCorrect: false },
-      { id: "B", text: "Svar 2", isCorrect: true },
-    ],
-    correctFeedback: "Klockrent, svar B! Svaret använder 'eftersom' och 'vilket leder till' för att bygga en komplett kausalkedja.",
-    incorrectFeedback: "Svar B är det utvecklade svaret. Svar 1 är bara ett enkelt påstående utan förklarande led.",
-  },
-  {
-    id: "del4_practice",
-    partHeader: "DEL 4: SKRIV DITT RESONERANDE SVAR",
-    progressPercent: 80,
-    category: "resonera",
-    stepType: "free_text",
-    sideText: {
-      title: "Utdrag: Läsning på papper vs skärm",
-      body: "Forskning visar att hjärnan bearbetar text djupare vid läsning i en tryckt bok jämfört med på en skärm. På skärmen tenderar ögat att skumma och söka snabba stimuli, vilket försämrar minnet av textens detaljer.",
-    },
-    boardPrompt:
-      "Skriv ditt eget resonerande svar: Varför riskerar elever som bara läser på skärm att få sämre läsförståelse över tid? Förklara i minst två led med bindeord som 'eftersom' och 'vilket medför'.",
-    placeholder: "Elever riskerar sämre förståelse eftersom... vilket leder till att...",
-    correctFeedback: "Starkt och moget resonemang! Du binder tydligt ihop orsak med långsiktig konsekvens.",
-    incorrectFeedback: "Tänk på att förlänga kedjan: Vad händer när ögat bara skummar? Vilken blir följden för minnet?",
-    rubricCriterion: "Resonera i minst två led med orsak och konsekvens.",
-  },
-  {
-    id: "del4_revision",
-    partHeader: "DEL 4: METAKOGNITION & KVALITETSKONTROLL",
-    progressPercent: 86,
-    category: "resonera",
-    stepType: "choice",
-    sideText: {
-      title: "Kursmål: Utvecklat resonemang",
-      body: "Ett utvecklat resonemang innehåller: 1. Påstående, 2. Förklaring/Orsak (varför), 3. Konsekvens/Följd (vad leder det till).",
-    },
-    boardPrompt: "Kunde du identifiera både 'orsak' och 'följd' i svaret du nyss formulerade?",
-    options: [
-      { id: "A", text: "Ja, jag förklarade både varför och vad konsekvensen blir.", isCorrect: true },
-      { id: "B", text: "Nej, jag stannade vid att bara ge ett påstående.", isCorrect: false },
-    ],
-    correctFeedback: "Bra metakognitiv koll! Det är just förmågan att granska sitt eget tänkande som bygger självständighet.",
-    incorrectFeedback: "Viktig insikt! Kom ihåg att alltid ställa dig frågan '...och vad leder det till?' för att nå nästa betygsnivå.",
-  },
+function emptyStats(): Record<QuestionCategory, CategoryStats> {
+  return Object.fromEntries(
+    CATEGORIES.map((c) => [c, { answered: 0, correct: 0, supported: 0, times: [] }]),
+  ) as unknown as Record<QuestionCategory, CategoryStats>;
+}
 
-  // ==========================================
-  // MELLANSTEG: DIKTAMEN & HÖGLÄSNING (LÄSPROFIL)
-  // ==========================================
-  {
-    id: "mellan_diktamen",
-    partHeader: "DIKTAMEN & HÖGLÄSNING (ANALYS AV LÄSFLYT)",
-    progressPercent: 92,
-    category: "pa_raderna",
-    stepType: "dictation",
-    sideText: {
-      title: "Högläsningstext: Människans roll i den digitala eran",
-      body: "Det är lätt att tro att tekniken styr vår framtid på ett ödesbestämt sätt. Men varje rad kod och varje politiskt beslut formuleras i grunden av människor. Frågan är inte vad maskinen vill göra med oss, utan vad vi väljer att göra med varandra genom maskinen.",
-    },
-    boardPrompt:
-      "Diktamen & Högläsning: Tryck på mikrofonen nedan och läs texten till höger högt med tydlig stämma. AI analyserar ditt läsflyt, din intonation och identifierar vilken typ av stöd du behöver i nästa lektion.",
-    correctFeedback: "Inspelningsanalys slutförd. Din läsprofil är genererad!",
-    incorrectFeedback: "",
-  },
+function secondsSince(start: number) {
+  return Number(((performance.now() - start) / 1000).toFixed(1));
+}
 
-  // ==========================================
-  // SLUTDIAGNOS (TRANSFER UTAN STÖDHJUL)
-  // ==========================================
-  {
-    id: "slutdiagnos",
-    partHeader: "SLUTDIAGNOS: TRANSFER UTAN STÖD",
-    progressPercent: 100,
-    category: "resonera",
-    stepType: "final_exam",
-    sideText: {
-      title: "Diagnostext: Den förlorade läsroen",
-      body: "I dagens uppkopplade klassrum kämpar boken mot ständiga notiser och skärmars lockelse. Forskare slår larm om att ungas förmåga att läsa längre sammanhängande texter eroderar i snabb takt. Vissa menar att vi måste acceptera att språket förändras och blir snabbare. Andra påpekar att den djupa läsningen är en förutsättning för empati, demokratisk delaktighet och kritiskt tänkande. Om vi inte värnar läsroen i skolan riskerar vi att skapa en generation som kan avkoda ord, men som saknar tålamod att förstå deras djupare mening.",
-    },
-    boardPrompt:
-      "SLUTDIAGNOS (Helt utan stöd):\n\n1. Vad är motståndarsidans främsta invändning mot bokläsning i texten?\n2. För ett eget utvecklat resonemang i två led om varför djup läsning ses som en demokratisk fråga.",
-    placeholder: "1. Motståndarna menar att...\n2. Djup läsning är en demokratisk fråga eftersom... vilket leder till...",
-    correctFeedback: "Slutdiagnosen är inlämnad! Du har genomfört samtliga steg självständigt från lästeknik till komplext resonemang.",
-    incorrectFeedback: "",
-    rubricCriterion: "Självständig tillämpning av både läsförståelse och resonemang utan handledningsstöd.",
-  },
-];
+const CYCLE: Phase[] = ["modellering", "traning", "aterkallning"];
+
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Markerar fraser i gult i lästexten. */
+function renderHighlighted(text: string, phrases: string[]) {
+  const unique = Array.from(new Set(phrases.filter(Boolean)));
+  if (unique.length === 0) return text;
+  const re = new RegExp(`(${unique.map(escapeRegExp).join("|")})`, "g");
+  return text.split(re).map((chunk, i) =>
+    unique.includes(chunk) ? (
+      <mark key={i} className="bg-[#FEF08A] px-0.5 rounded-sm font-medium text-zinc-950">
+        {chunk}
+      </mark>
+    ) : (
+      <Fragment key={i}>{chunk}</Fragment>
+    ),
+  );
+}
+
+function phaseIntro(step: LessonStep): string | null {
+  const part = PARTS.find((p) => p.part === step.part);
+  switch (step.phase) {
+    case "modellering":
+      return `${step.partTitle.toUpperCase()}\nMål: ${part?.goal ?? ""}\nFörst visar jag hur jag tänker.`;
+    case "traning":
+      return "TRÄNA SJÄLV: Nu är det din tur på en ny text! Behöver du hjälp kan du be om en ledtråd.";
+    case "aterkallning":
+      return step.text
+        ? "ÅTERKALLA UTAN STÖD: Ny text, och nu svarar du helt själv. Inga ledtrådar och ingen uppläsning. Visa vad du kan!"
+        : null;
+    case "diagnos":
+      return "SLUTDIAGNOS: En lång text, som på nationella provet. Du svarar på fem frågor helt utan stöd. Ta den tid du behöver.";
+    default:
+      return null;
+  }
+}
+
+// ============================================================================
+// Komponent
+// ============================================================================
 
 export default function CompleteWhiteboardSystem() {
+  const [interest, setInterest] = useState<Interest | null>(null);
+  const steps = useMemo(() => buildSteps(interest ?? "sport"), [interest]);
+
   const [stepIndex, setStepIndex] = useState(0);
-  const currentStep = ALL_STEPS[stepIndex];
+  const step = steps[stepIndex];
+  const task = step.task;
+  const supportFree = isSupportFree(step.phase);
 
-  // Ljudupplåsning för webbläsarens autoplay-policy
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  // Adaptiv textnivå
+  const [adaptState, setAdaptState] = useState<AdaptState>(START_ADAPT);
+  const [textLevels, setTextLevels] = useState<Record<string, Level>>({});
+  const lastLeveledLevelRef = useRef<Level | null>(null);
+  const stepLevel: Level =
+    step.leveled && step.textKey ? (textLevels[step.textKey] ?? adaptState.level) : 1;
 
-  // Board-tillstånd: Tavlan startar helt vit medan textstycket spelas upp
+  // Tavlans tillstånd
   const [boardStage, setBoardStage] = useState<
     "listening_blank" | "active_task" | "showing_feedback"
-  >("listening_blank");
+  >("active_task");
+  const [boardHistory, setBoardHistory] = useState<BoardEntry[]>(() =>
+    step.task.kind === "interest" ? [{ sender: "teacher", text: step.task.prompt }] : [],
+  );
+  const boardEndRef = useRef<HTMLDivElement | null>(null);
 
-  const [boardHistory, setBoardHistory] = useState<
-    {
-      sender: "teacher" | "student";
-      text: string;
-      isFeedback?: boolean;
-      strength?: string;
-      nextStep?: string;
-    }[]
-  >([]);
-  const [selectedOption, setSelectedOption] = useState<"A" | "B" | null>(null);
+  // Per-steg-tillstånd
+  const [selectedOption, setSelectedOption] = useState<OptionId | null>(null);
   const [freeText, setFreeText] = useState("");
+  const [lastAnswer, setLastAnswer] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Talsyntes
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-
-  // Diktamen & Inspelning
+  const [hintShown, setHintShown] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [canRetry, setCanRetry] = useState(false);
+  const [thoughtIndex, setThoughtIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
 
-  // Statistik & Telemetri för anpassad lektion
+  // Statistik & slutdiagnos
   const startTimeRef = useRef<number>(0);
-  const [stats, setStats] = useState({
-    errorsByCategory: {
-      texttyp: 0,
-      pa_raderna: 0,
-      mellan_raderna: 0,
-      sammanfatta: 0,
-      resonera: 0,
-    },
-    timesByCategory: {
-      texttyp: [] as number[],
-      pa_raderna: [] as number[],
-      mellan_raderna: [] as number[],
-      sammanfatta: [] as number[],
-      resonera: [] as number[],
-    },
-  });
+  const [stats, setStats] = useState(emptyStats);
+  const [diagResults, setDiagResults] = useState<Record<string, Evaluation | "pending" | "error">>(
+    {},
+  );
 
-  // Dedikerad funktion för att spela upp textstycket innan uppgiften träder fram
-  function playStepAudio() {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setBoardStage("active_task");
-      startTimeRef.current = performance.now();
-      return;
+  // ==========================================================================
+  // Ljud: ElevenLabs med webbläsarens röst som reserv
+  // ==========================================================================
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const playTokenRef = useRef(0);
+
+  function stopAudio() {
+    playTokenRef.current++; // ogiltigförklara pågående hämtningar
+    if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.pause();
+      audioRef.current = null;
     }
-
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(currentStep.sideText.body);
-    utterance.lang = "sv-SE";
-    utterance.rate = 0.95;
-
-    utterance.onstart = () => setIsPlayingAudio(true);
-    utterance.onend = () => {
-      setIsPlayingAudio(false);
-      setBoardStage("active_task");
-      startTimeRef.current = performance.now();
-    };
-    utterance.onerror = () => {
-      setIsPlayingAudio(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  }
-
-  // Initiera vit tavla + spela upp textstycket automatiskt när ljudet är upplåst
-  useEffect(() => {
-    setSelectedOption(null);
-    setFreeText("");
-    setBoardStage("listening_blank");
-    setBoardHistory([{ sender: "teacher", text: currentStep.boardPrompt }]);
-
-    if (!audioUnlocked) return;
-
-    playStepAudio();
-
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepIndex, audioUnlocked]);
-
-  // Startknapp på steg 1 som låser upp ljudet i webbläsaren och startar uppläsningen
-  function handleStartAndListen() {
-    setAudioUnlocked(true);
-    playStepAudio();
-  }
-
-  // Manuell Lyssna / Pausa-knapp på textkortet
-  function toggleReadAloud() {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-
-    if (!audioUnlocked) {
-      setAudioUnlocked(true);
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
     }
-
-    if (isPlayingAudio) {
-      window.speechSynthesis.cancel();
-      setIsPlayingAudio(false);
-      if (boardStage === "listening_blank") {
-        setBoardStage("active_task");
-        startTimeRef.current = performance.now();
-      }
-      return;
-    }
-
-    playStepAudio();
-  }
-
-  function revealBoardNow() {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
-    setAudioUnlocked(true);
-    setIsPlayingAudio(false);
-    setBoardStage("active_task");
-    startTimeRef.current = performance.now();
   }
 
-  // Hantera klick på A eller B på tavlan
-  function handleOptionSelect(opt: { id: "A" | "B"; text: string; isCorrect: boolean }) {
-    if (selectedOption !== null || isSubmitting || boardStage !== "active_task") return;
+  function playWithBrowserVoice(text: string, onDone: () => void) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setIsPlayingAudio(false);
+      onDone();
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "sv-SE";
+    utterance.rate = 0.95;
+    utterance.onend = () => {
+      setIsPlayingAudio(false);
+      onDone();
+    };
+    utterance.onerror = () => setIsPlayingAudio(false);
+    window.speechSynthesis.speak(utterance);
+  }
 
-    const elapsed = Number(((performance.now() - startTimeRef.current) / 1000).toFixed(1));
-    setSelectedOption(opt.id);
+  async function playText(text: string, onDone: () => void) {
+    stopAudio();
+    const token = playTokenRef.current;
+    setIsPlayingAudio(true);
 
-    setStats((prev) => ({
-      ...prev,
-      timesByCategory: {
-        ...prev.timesByCategory,
-        [currentStep.category]: [...prev.timesByCategory[currentStep.category], elapsed],
-      },
-      errorsByCategory: {
-        ...prev.errorsByCategory,
-        [currentStep.category]: opt.isCorrect
-          ? prev.errorsByCategory[currentStep.category]
-          : prev.errorsByCategory[currentStep.category] + 1,
-      },
-    }));
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `TTS-fel ${res.status}`);
+      }
+      const blob = await res.blob();
+      if (token !== playTokenRef.current) return; // avbruten under hämtning
 
-    const feedback = opt.isCorrect ? currentStep.correctFeedback : currentStep.incorrectFeedback;
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioUrlRef.current = url;
+      audioRef.current = audio;
+      audio.onended = () => {
+        if (token !== playTokenRef.current) return;
+        setIsPlayingAudio(false);
+        onDone();
+      };
+      await audio.play();
+    } catch (error) {
+      if (token !== playTokenRef.current) return;
+      console.error("ElevenLabs-uppläsning misslyckades, använder webbläsarens röst:", error);
+      playWithBrowserVoice(text, onDone);
+    }
+  }
 
+  function speakThought(t: ThinkAloudTask, index: number) {
+    const text = index < t.thoughts.length ? t.thoughts[index].text : t.summary;
+    playText(text, () => {});
+  }
+
+  useEffect(() => () => stopAudio(), []);
+
+  // Scrolla tavlan till senaste raden
+  useEffect(() => {
+    boardEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [boardHistory, thoughtIndex, boardStage]);
+
+  // ==========================================================================
+  // Stegnavigering
+  // ==========================================================================
+
+  /** Visar uppgiften på tavlan när texten är läst/uppläst. */
+  function activateBoard(s: LessonStep, speak: boolean) {
+    setBoardStage("active_task");
+    startTimeRef.current = performance.now();
+    if (s.task.kind === "think_aloud" && speak) speakThought(s.task, 0);
+  }
+
+  function enterStep(index: number) {
+    const next = steps[index];
+    const prev = steps[index - 1];
+    if (!next) return;
+
+    stopAudio();
+    setIsPlayingAudio(false);
+    setSelectedOption(null);
+    setFreeText("");
+    setLastAnswer("");
+    setHintShown(false);
+    setAttempts(0);
+    setCanRetry(false);
+    setThoughtIndex(0);
+    setIsRecording(false);
+
+    const entries: BoardEntry[] = [];
+
+    // Fasintro när en ny fas eller del börjar
+    if (!prev || prev.phase !== next.phase || prev.part !== next.part) {
+      const intro = phaseIntro(next);
+      if (intro) entries.push({ sender: "teacher", text: intro, tone: "note" });
+    }
+
+    // Lås textnivån när en ny anpassad text visas första gången
+    let level: Level = 1;
+    if (next.leveled && next.textKey) {
+      const locked = textLevels[next.textKey];
+      level = locked ?? adaptState.level;
+      if (!locked) {
+        setTextLevels((p) => ({ ...p, [next.textKey as string]: level }));
+        const last = lastLeveledLevelRef.current;
+        if (last !== null && level !== last) {
+          entries.push({
+            sender: "teacher",
+            tone: "note",
+            text:
+              level > last
+                ? `↑ Du klarar dig bra utan stöd, så jag har gjort texten längre och lite svårare (nivå ${level} av 3).`
+                : `↓ Jag har gjort texten lite kortare den här gången (nivå ${level} av 3). Vi bygger upp det igen!`,
+          });
+        }
+        lastLeveledLevelRef.current = level;
+      }
+    }
+
+    if (next.task.kind === "think_aloud") {
+      entries.push({ sender: "teacher", text: next.task.intro });
+    } else if (next.task.kind !== "result") {
+      entries.push({ sender: "teacher", text: next.task.prompt });
+    }
+
+    setStepIndex(index);
+    setBoardHistory(entries);
+
+    const isNewText = !!next.textKey && next.textKey !== prev?.textKey;
+    if (isNewText && next.text) {
+      setBoardStage("listening_blank");
+      const autoRead =
+        audioUnlocked && !isSupportFree(next.phase) && next.phase !== "diktamen";
+      if (autoRead) playText(plainText(next.text, level), () => activateBoard(next, true));
+    } else {
+      activateBoard(next, false);
+    }
+  }
+
+  function handleProceedToNextStep() {
+    enterStep(stepIndex + 1);
+  }
+
+  // ==========================================================================
+  // Uppläsningskontroller
+  // ==========================================================================
+
+  function handleStartAndListen() {
+    if (!step.text) return;
+    setAudioUnlocked(true);
+    playText(plainText(step.text, stepLevel), () => activateBoard(step, true));
+  }
+
+  function toggleReadAloud() {
+    if (isPlayingAudio) {
+      stopAudio();
+      setIsPlayingAudio(false);
+      if (boardStage === "listening_blank") activateBoard(step, false);
+      return;
+    }
+    if (!step.text) return;
+    setAudioUnlocked(true);
+    if (boardStage === "listening_blank") {
+      playText(plainText(step.text, stepLevel), () => activateBoard(step, true));
+    } else {
+      playText(plainText(step.text, stepLevel), () => {});
+    }
+  }
+
+  function revealBoardNow() {
+    stopAudio();
+    setIsPlayingAudio(false);
+    activateBoard(step, audioUnlocked);
+  }
+
+  // ==========================================================================
+  // Svar och återkoppling
+  // ==========================================================================
+
+  function registerOutcome(category: QuestionCategory, outcome: Outcome) {
+    if (!affectsLevel(step.phase)) return;
+    const elapsed = secondsSince(startTimeRef.current);
+    setAdaptState((s) => adapt(s, outcome));
+    setStats((prev) => {
+      const c = prev[category];
+      return {
+        ...prev,
+        [category]: {
+          answered: c.answered + 1,
+          correct: c.correct + (outcome === "wrong" ? 0 : 1),
+          supported: c.supported + (outcome === "correct_with_support" ? 1 : 0),
+          times: [...c.times, elapsed],
+        },
+      };
+    });
+  }
+
+  function handleInterestSelect(id: Interest) {
+    if (boardStage !== "active_task") return;
+    const choice = INTERESTS.find((i) => i.id === id)!;
+    setInterest(id);
+    setAudioUnlocked(true);
     setBoardHistory((prev) => [
       ...prev,
-      { sender: "student", text: `Svar ${opt.id}: ${opt.text}` },
-      { sender: "teacher", text: feedback, isFeedback: true },
+      { sender: "student", text: `${choice.emoji} ${choice.label}` },
+      {
+        sender: "teacher",
+        tone: "feedback",
+        ok: true,
+        text: `Toppen! Jag väljer texter om ${choice.label.toLowerCase()}. Vi börjar med korta texter, och jag gör dem längre i takt med att du blir säkrare. Målet är att du ska klara en lång text som på nationella provet.`,
+      },
     ]);
-
-    // Stanna kvar tills eleven klickar "Redo för nästa steg"
     setBoardStage("showing_feedback");
   }
 
-  // Hantera fritextinmatning (med AI-analys)
-  async function handleFreeTextSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const val = freeText.trim();
-    if (!val || isSubmitting || boardStage !== "active_task") return;
+  function handleHint() {
+    if ((task.kind !== "choice" && task.kind !== "free") || !task.hint || hintShown) return;
+    setHintShown(true);
+    setBoardHistory((prev) => [
+      ...prev,
+      { sender: "teacher", tone: "hint", text: `💡 ${task.hint!.text}` },
+    ]);
+  }
 
-    setIsSubmitting(true);
-    const elapsed = Number(((performance.now() - startTimeRef.current) / 1000).toFixed(1));
+  function handleOptionSelect(opt: ChoiceTask["options"][number]) {
+    if (task.kind !== "choice") return;
+    if (selectedOption !== null || isSubmitting || boardStage !== "active_task") return;
 
-    setBoardHistory((prev) => [...prev, { sender: "student", text: val }]);
+    setSelectedOption(opt.id);
+    registerOutcome(
+      task.category,
+      opt.isCorrect ? (hintShown ? "correct_with_support" : "correct") : "wrong",
+    );
 
+    setBoardHistory((prev) => [
+      ...prev,
+      { sender: "student", text: `${opt.id}: ${opt.text}` },
+      {
+        sender: "teacher",
+        tone: "feedback",
+        ok: opt.isCorrect,
+        text: opt.isCorrect ? task.correctFeedback : task.incorrectFeedback,
+      },
+    ]);
+    setBoardStage("showing_feedback");
+  }
+
+  async function evaluate(s: LessonStep, answer: string, level: Level): Promise<Evaluation | null> {
+    if (s.task.kind !== "free") return null;
     try {
       const response = await fetch("/api/whiteboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stepId: currentStep.id,
-          category: currentStep.category,
-          studentAnswer: val,
-          rubricTarget: currentStep.rubricCriterion,
-          sideText: currentStep.sideText.body,
+          stepId: s.id,
+          category: s.task.category,
+          phase: s.phase,
+          level,
+          question: s.task.prompt,
+          studentAnswer: answer,
+          rubricTarget: s.task.rubric,
+          sideText: s.text ? plainText(s.text, level) : "",
         }),
       });
-
       const data = await response.json();
+      if (data.error || typeof data.passed !== "boolean") return null;
+      return data as Evaluation;
+    } catch {
+      return null;
+    }
+  }
 
+  async function handleFreeTextSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (task.kind !== "free") return;
+    const val = freeText.trim();
+    if (!val || isSubmitting || boardStage !== "active_task") return;
+
+    setBoardHistory((prev) => [...prev, { sender: "student", text: val }]);
+    setFreeText("");
+    setLastAnswer(val);
+
+    // Slutdiagnos: spara svaret, rätta i bakgrunden, visa allt på slutet
+    if (step.phase === "diagnos") {
+      const diagStep = step;
+      setDiagResults((prev) => ({ ...prev, [diagStep.id]: "pending" }));
+      evaluate(diagStep, val, stepLevel).then((r) =>
+        setDiagResults((prev) => ({ ...prev, [diagStep.id]: r ?? "error" })),
+      );
       setBoardHistory((prev) => [
         ...prev,
         {
           sender: "teacher",
-          text: data.boardFeedback || currentStep.correctFeedback,
-          isFeedback: true,
-          strength: data.strength,
-          nextStep: data.nextStep,
+          tone: "note",
+          text: "Svaret är sparat ✓ Jag rättar allt när du är klar med alla frågor.",
         },
       ]);
-
-      setStats((prev) => ({
-        ...prev,
-        timesByCategory: {
-          ...prev.timesByCategory,
-          [currentStep.category]: [...prev.timesByCategory[currentStep.category], elapsed],
-        },
-      }));
-    } catch {
-      setBoardHistory((prev) => [
-        ...prev,
-        { sender: "teacher", text: currentStep.correctFeedback, isFeedback: true },
-      ]);
-    } finally {
-      setIsSubmitting(false);
-      setFreeText("");
-      // Stanna kvar tills eleven klickar "Redo för nästa steg"
       setBoardStage("showing_feedback");
+      return;
     }
+
+    setIsSubmitting(true);
+    const ev = await evaluate(step, val, stepLevel);
+    const passed = ev?.passed ?? true;
+
+    setBoardHistory((prev) => [
+      ...prev,
+      {
+        sender: "teacher",
+        tone: "feedback",
+        ok: passed,
+        text: ev?.boardFeedback || task.fallbackFeedback,
+        strength: ev?.strength || undefined,
+        nextStep: ev?.nextStep || undefined,
+      },
+    ]);
+
+    if (attempts === 0) {
+      registerOutcome(
+        task.category,
+        passed ? (hintShown ? "correct_with_support" : "correct") : "wrong",
+      );
+    }
+    // Liten AI-stöttning: en chans att förbättra svaret under träningen
+    setCanRetry(!passed && step.phase === "traning" && attempts === 0);
+    setAttempts((a) => a + 1);
+    setIsSubmitting(false);
+    setBoardStage("showing_feedback");
   }
 
-  // Diktamen & Högläsning
+  function handleRetry() {
+    setCanRetry(false);
+    setFreeText(lastAnswer);
+    setBoardHistory((prev) => [
+      ...prev,
+      {
+        sender: "teacher",
+        tone: "hint",
+        text: "Förbättra ditt svar med hjälp av nästa steg ovan. Du kan ändra direkt i din text.",
+      },
+    ]);
+    setBoardStage("active_task");
+  }
+
+  function handleNextThought() {
+    if (task.kind !== "think_aloud") return;
+    const n = thoughtIndex + 1;
+    setThoughtIndex(n);
+    if (audioUnlocked) speakThought(task, n);
+  }
+
+  // Diktamen & högläsning
   function handleDictationToggle() {
     if (boardStage !== "active_task") return;
 
-    if (isRecording) {
-      setIsRecording(false);
-
-      const weakest = (Object.keys(stats.errorsByCategory) as QuestionCategory[]).reduce((a, b) =>
-        stats.errorsByCategory[a] >= stats.errorsByCategory[b] ? a : b
-      );
-
-      const report = `Läshastighet: 138 ord/minut. Intonation och flyt: Mycket god. Lektionsanalysen visar att du är snabb och säker på 'på raderna', men behöver fördjupad träning på '${weakest.replace(
-        "_",
-        " "
-      )}'. Din nästa stegvisa lektion anpassas med fler modellerande mikrostopp för just detta.`;
-
-      setBoardHistory((prev) => [
-        ...prev,
-        { sender: "teacher", text: report, isFeedback: true },
-      ]);
-
-      // Stanna kvar tills eleven klickar "Redo för nästa steg"
-      setBoardStage("showing_feedback");
-    } else {
+    if (!isRecording) {
       setIsRecording(true);
+      return;
     }
+    setIsRecording(false);
+
+    const answered = CATEGORIES.filter((c) => stats[c].answered > 0);
+    const weakest = answered.length
+      ? answered.reduce((a, b) =>
+          stats[a].correct / stats[a].answered <= stats[b].correct / stats[b].answered ? a : b,
+        )
+      : "resonera";
+
+    const report = `Läshastighet: 138 ord/minut. Intonation och flyt: Mycket god. Under lektionen var du säkrast på det du tränat mest, men '${CATEGORY_LABELS[weakest].toLowerCase()}' behöver mer träning. Nu väntar slutdiagnosen!`;
+
+    setBoardHistory((prev) => [...prev, { sender: "teacher", tone: "feedback", ok: true, text: report }]);
+    setBoardStage("showing_feedback");
   }
 
-  // Gå vidare först när eleven aktivt klickar "Redo för nästa steg"
-  function handleProceedToNextStep() {
-    if (stepIndex + 1 < ALL_STEPS.length) {
-      setStepIndex((prev) => prev + 1);
-    }
+  // ==========================================================================
+  // Härledda värden för rendering
+  // ==========================================================================
+
+  const progressPercent = Math.round((stepIndex / (steps.length - 1)) * 100);
+  const interestInfo = INTERESTS.find((i) => i.id === interest);
+  const isLastStep = stepIndex === steps.length - 1;
+
+  const highlights: string[] = [];
+  if (task.kind === "think_aloud" && boardStage !== "listening_blank") {
+    task.thoughts
+      .slice(0, thoughtIndex + 1)
+      .forEach((t) => t.highlight && highlights.push(t.highlight));
+  }
+  if (hintShown && (task.kind === "choice" || task.kind === "free") && task.hint?.highlight) {
+    highlights.push(task.hint.highlight);
   }
 
-  const isLastStep = stepIndex === ALL_STEPS.length - 1;
+  const showHintButton =
+    boardStage === "active_task" &&
+    !supportFree &&
+    (task.kind === "choice" || task.kind === "free") &&
+    !!task.hint &&
+    !hintShown &&
+    selectedOption === null;
+
+  const paragraphs = step.text ? paragraphsFor(step.text, stepLevel) : [];
+  const showGlossary =
+    !!step.text?.glossary && step.leveled && stepLevel === 1 && !supportFree;
+
+  const diagSteps = steps.filter((s) => s.phase === "diagnos");
+  const diagPending = diagSteps.some(
+    (s) => !diagResults[s.id] || diagResults[s.id] === "pending",
+  );
+
+  // ==========================================================================
+  // Rendering
+  // ==========================================================================
 
   return (
     <main className="min-h-screen bg-[#F3F4F6] flex items-center justify-center p-3 sm:p-6 lg:p-8 select-none antialiased">
@@ -554,47 +611,116 @@ export default function CompleteWhiteboardSystem() {
       `}</style>
 
       <div className="w-full max-w-6xl flex flex-col gap-4">
-        {/* PROGRESS-INDIKATOR I TOPPEN */}
-        <div className="flex items-center justify-between px-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-            {currentStep.partHeader}
-          </span>
-          <span className="text-xs font-semibold text-zinc-400">
-            {currentStep.progressPercent}%
-          </span>
+        {/* SIDHUVUD: del, fas-progression och anpassning */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+              {step.partTitle}
+            </span>
+            {step.part >= 1 && step.part <= 4 ? (
+              <div className="flex items-center gap-1">
+                {CYCLE.map((ph, i) => {
+                  const current = CYCLE.indexOf(step.phase);
+                  const state = i < current ? "done" : i === current ? "active" : "todo";
+                  return (
+                    <Fragment key={ph}>
+                      {i > 0 && <span className="text-zinc-300 text-xs">→</span>}
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                          state === "active"
+                            ? "bg-zinc-900 text-white"
+                            : state === "done"
+                              ? "bg-zinc-200 text-zinc-600"
+                              : "border border-zinc-200 text-zinc-400"
+                        }`}
+                      >
+                        {state === "done" && "✓ "}
+                        {PHASE_LABELS[ph]}
+                      </span>
+                    </Fragment>
+                  );
+                })}
+              </div>
+            ) : (
+              step.phase !== "intro" && (
+                <span className="rounded-full bg-zinc-900 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                  {PHASE_LABELS[step.phase]}
+                </span>
+              )
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-xs font-semibold text-zinc-400">
+            {interestInfo && (
+              <span className="text-zinc-500">
+                {interestInfo.emoji} {interestInfo.label}
+              </span>
+            )}
+            {step.leveled && (
+              <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-amber-700">
+                Textnivå {stepLevel}/3
+              </span>
+            )}
+            {step.phase === "diagnos" && (
+              <span className="rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-red-700">
+                NP-nivå
+              </span>
+            )}
+            <span>{progressPercent}%</span>
+          </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* DEN TVÅDELADE ARBETSPLATSEN (7 kolumner Tavla / 5 kolumner Fast Textkort) */}
-        {/* ========================================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* VÄNSTER: DEN FYSISKA WHITEBOARDEN */}
-          <div className="lg:col-span-7 relative bg-white rounded-3xl border-[14px] border-[#374151] shadow-2xl flex flex-col justify-between p-6 sm:p-9 min-h-[560px] overflow-hidden">
-            {/* Svarta plasthörn */}
+          {/* ================================================================ */}
+          {/* VÄNSTER: WHITEBOARDEN                                             */}
+          {/* ================================================================ */}
+          <div className="lg:col-span-7 relative bg-white rounded-3xl border-[14px] border-[#374151] shadow-2xl flex flex-col p-6 sm:p-9 min-h-[560px] lg:h-[680px] overflow-hidden">
             <div className="absolute -top-[14px] -left-[14px] w-8 h-8 bg-zinc-950 rounded-tl-2xl pointer-events-none" />
             <div className="absolute -top-[14px] -right-[14px] w-8 h-8 bg-zinc-950 rounded-tr-2xl pointer-events-none" />
             <div className="absolute -bottom-[14px] -left-[14px] w-8 h-8 bg-zinc-950 rounded-bl-2xl pointer-events-none" />
             <div className="absolute -bottom-[14px] -right-[14px] w-8 h-8 bg-zinc-950 rounded-br-2xl pointer-events-none" />
 
-            {/* Röd progress-linje överst på whiteboarden */}
             <div className="w-full mb-5">
               <div className="w-full h-1.5 bg-zinc-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#DC2626] rounded-full transition-all duration-700 ease-out"
-                  style={{ width: `${currentStep.progressPercent}%` }}
+                  style={{ width: `${progressPercent}%` }}
                 />
               </div>
             </div>
 
-            {/* TAVLANS YTA */}
             <div className="flex-1 overflow-y-auto pr-1 flex flex-col">
-              {/* FAS 1: Tavlan är helt vit medan textstycket spelas upp vid sidan av */}
+              {/* FAS 1: Tavlan är vit medan texten läses */}
               {boardStage === "listening_blank" && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-12 space-y-5">
-                  {!audioUnlocked ? (
+                  {boardHistory
+                    .filter((e) => e.tone === "note")
+                    .map((e, i) => (
+                      <p
+                        key={i}
+                        className="font-whiteboard text-lg sm:text-xl text-sky-700 max-w-md whitespace-pre-line"
+                      >
+                        {e.text}
+                      </p>
+                    ))}
+                  {supportFree || step.phase === "diktamen" ? (
                     <>
                       <p className="font-whiteboard text-2xl sm:text-3xl text-zinc-700 max-w-md">
-                        Läs eller lyssna på textutdraget till höger innan uppgiften visas på tavlan.
+                        {step.phase === "diktamen"
+                          ? "Läs igenom texten till höger tyst först."
+                          : "Läs texten till höger själv, utan uppläsning. Klicka när du har läst klart."}
+                      </p>
+                      <button
+                        onClick={revealBoardNow}
+                        className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white hover:bg-zinc-800 transition shadow-md"
+                      >
+                        <Play size={14} />
+                        <span>Jag har läst – visa uppgiften</span>
+                      </button>
+                    </>
+                  ) : !audioUnlocked ? (
+                    <>
+                      <p className="font-whiteboard text-2xl sm:text-3xl text-zinc-700 max-w-md">
+                        Läs eller lyssna på texten till höger innan uppgiften visas på tavlan.
                       </p>
                       <button
                         onClick={handleStartAndListen}
@@ -608,8 +734,8 @@ export default function CompleteWhiteboardSystem() {
                     <>
                       <p className="font-whiteboard text-2xl sm:text-3xl text-zinc-500 animate-pulse">
                         {isPlayingAudio
-                          ? "Lyssna noga på textutdraget till höger..."
-                          : "Läs igenom textutdraget till höger..."}
+                          ? "Lyssna noga på texten till höger..."
+                          : "Läs igenom texten till höger..."}
                       </p>
                       <button
                         onClick={revealBoardNow}
@@ -623,47 +749,108 @@ export default function CompleteWhiteboardSystem() {
                 </div>
               )}
 
-              {/* FAS 2 & 3: Uppgift, elevens svar och återkoppling på whiteboarden */}
+              {/* FAS 2 & 3: Uppgift, svar och återkoppling */}
               {boardStage !== "listening_blank" && (
                 <div className="space-y-4">
                   {boardHistory.map((item, idx) => (
                     <div key={idx} className="space-y-1">
                       <p
-                        className={`font-whiteboard text-2xl sm:text-3xl leading-snug tracking-wide whitespace-pre-line ${
-                          item.isFeedback
-                            ? "text-emerald-800"
-                            : item.sender === "student"
-                            ? "text-[#5B46E5]"
-                            : "text-zinc-900"
+                        className={`font-whiteboard leading-snug tracking-wide whitespace-pre-line ${
+                          item.tone === "note"
+                            ? "text-lg sm:text-xl text-sky-700"
+                            : item.tone === "hint"
+                              ? "text-xl sm:text-2xl text-amber-700"
+                              : item.tone === "feedback"
+                                ? `text-xl sm:text-2xl ${item.ok === false ? "text-amber-800" : "text-emerald-800"}`
+                                : item.sender === "student"
+                                  ? "text-xl sm:text-2xl text-[#5B46E5]"
+                                  : "text-xl sm:text-2xl text-zinc-900"
                         }`}
                       >
                         {item.text}
                       </p>
-
-                      {/* Formativa element med samma whiteboard-typsnitt */}
                       {item.strength && (
-                        <p className="font-whiteboard text-xl sm:text-2xl text-emerald-800 pt-1">
+                        <p className="font-whiteboard text-lg sm:text-xl text-emerald-800 pt-1">
                           ✓ Styrka: {item.strength}
                         </p>
                       )}
                       {item.nextStep && (
-                        <p className="font-whiteboard text-xl sm:text-2xl text-amber-800">
+                        <p className="font-whiteboard text-lg sm:text-xl text-amber-800">
                           → Nästa steg: {item.nextStep}
                         </p>
                       )}
                     </div>
                   ))}
 
-                  {/* KLICKBARA VAL DIREKT PÅ TAVLAN (A & B) */}
-                  {currentStep.options &&
+                  {/* MODELLERING: Edda tänker högt */}
+                  {task.kind === "think_aloud" && (
+                    <div className="space-y-3">
+                      <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-sky-700">
+                        <Brain size={14} /> Edda tänker högt
+                      </p>
+                      {task.thoughts.slice(0, thoughtIndex + 1).map((t, i) => (
+                        <p
+                          key={i}
+                          className="font-whiteboard text-xl sm:text-2xl leading-snug text-sky-900 border-l-4 border-sky-200 pl-3"
+                        >
+                          <span className="font-bold">{i + 1}.</span> {t.text}
+                        </p>
+                      ))}
+                      {thoughtIndex >= task.thoughts.length ? (
+                        <>
+                          <p className="font-whiteboard text-xl sm:text-2xl leading-snug text-emerald-800 bg-emerald-50 rounded-xl p-3">
+                            {task.summary}
+                          </p>
+                          <button
+                            onClick={handleProceedToNextStep}
+                            className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 transition shadow-sm"
+                          >
+                            <span>Jag hänger med – visa ett bra exempel</span>
+                            <ArrowRight size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={handleNextThought}
+                          className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-5 py-2 text-xs font-semibold text-sky-800 hover:bg-sky-100 transition"
+                        >
+                          <span>
+                            {thoughtIndex === task.thoughts.length - 1
+                              ? "Visa slutsatsen"
+                              : "Nästa tanke"}
+                          </span>
+                          <ArrowRight size={14} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* START: välj intresse */}
+                  {task.kind === "interest" && boardStage === "active_task" && (
+                    <div className="space-y-2 pt-2">
+                      {INTERESTS.map((i) => (
+                        <button
+                          key={i.id}
+                          onClick={() => handleInterestSelect(i.id)}
+                          className="font-whiteboard w-full text-left text-2xl sm:text-3xl text-zinc-900 hover:text-[#5B46E5] transition flex items-center gap-3 p-2 rounded-xl hover:bg-zinc-50"
+                        >
+                          <span>{i.emoji}</span>
+                          <span>{i.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* FLERVAL A/B/C */}
+                  {task.kind === "choice" &&
                     selectedOption === null &&
                     boardStage === "active_task" && (
                       <div className="space-y-2 pt-2">
-                        {currentStep.options.map((opt) => (
+                        {task.options.map((opt) => (
                           <button
                             key={opt.id}
                             onClick={() => handleOptionSelect(opt)}
-                            className="font-whiteboard w-full text-left text-2xl sm:text-3xl text-zinc-900 hover:text-[#5B46E5] transition flex items-start gap-2 p-1.5 rounded-xl hover:bg-zinc-50"
+                            className="font-whiteboard w-full text-left text-xl sm:text-2xl text-zinc-900 hover:text-[#5B46E5] transition flex items-start gap-2 p-1.5 rounded-xl hover:bg-zinc-50"
                           >
                             <span className="font-bold underline">{opt.id}:</span>
                             <span>{opt.text}</span>
@@ -672,32 +859,112 @@ export default function CompleteWhiteboardSystem() {
                       </div>
                     )}
 
-                  {/* DIKTAMEN: MIKROFONKNAPP PÅ TAVLAN */}
-                  {currentStep.stepType === "dictation" &&
-                    boardStage === "active_task" && (
-                      <div className="pt-4 flex flex-col items-center gap-3">
-                        <button
-                          onClick={handleDictationToggle}
-                          className={`h-16 w-16 rounded-full flex items-center justify-center transition shadow-lg ${
-                            isRecording
-                              ? "bg-red-600 text-white animate-pulse"
-                              : "bg-zinc-900 text-white hover:bg-zinc-800"
-                          }`}
-                        >
-                          {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
-                        </button>
-                        <span className="font-whiteboard text-xl text-zinc-500">
-                          {isRecording
-                            ? "Spelar in högläsning... Klicka igen när du är klar."
-                            : "Klicka för att starta högläsning"}
-                        </span>
-                      </div>
-                    )}
+                  {/* LITEN AI-STÖTTNING: ledtråd */}
+                  {showHintButton && (
+                    <button
+                      onClick={handleHint}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 transition"
+                    >
+                      <Lightbulb size={13} />
+                      <span>Jag behöver en ledtråd</span>
+                    </button>
+                  )}
 
-                  {/* ÅTERKOPPLINGEN STÅR KVAR TILLS ELEVEN KLICKAR "REDO FÖR NÄSTA STEG" */}
+                  {/* DIKTAMEN */}
+                  {task.kind === "dictation" && boardStage === "active_task" && (
+                    <div className="pt-4 flex flex-col items-center gap-3">
+                      <button
+                        onClick={handleDictationToggle}
+                        className={`h-16 w-16 rounded-full flex items-center justify-center transition shadow-lg ${
+                          isRecording
+                            ? "bg-red-600 text-white animate-pulse"
+                            : "bg-zinc-900 text-white hover:bg-zinc-800"
+                        }`}
+                      >
+                        {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
+                      </button>
+                      <span className="font-whiteboard text-xl text-zinc-500">
+                        {isRecording
+                          ? "Spelar in högläsning... Klicka igen när du är klar."
+                          : "Klicka för att starta högläsning"}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* RESULTAT: läsprofil efter slutdiagnosen */}
+                  {task.kind === "result" && (
+                    <div className="space-y-4">
+                      <p className="font-whiteboard text-3xl text-zinc-900">Din läsprofil</p>
+                      {diagPending ? (
+                        <p className="font-whiteboard text-2xl text-zinc-500 animate-pulse">
+                          Edda rättar din slutdiagnos...
+                        </p>
+                      ) : (
+                        <>
+                          {diagSteps.map((s) => {
+                            const r = diagResults[s.id];
+                            const ev = r && r !== "pending" && r !== "error" ? r : null;
+                            const cat = s.task.kind === "free" ? s.task.category : "resonera";
+                            return (
+                              <div key={s.id} className="space-y-0.5">
+                                <p
+                                  className={`font-whiteboard text-xl sm:text-2xl ${
+                                    ev?.passed ? "text-emerald-800" : "text-amber-800"
+                                  }`}
+                                >
+                                  {ev ? (ev.passed ? "✓" : "→") : "•"} {CATEGORY_LABELS[cat]}
+                                  {ev ? `: ${ev.boardFeedback}` : ": Kunde inte rättas automatiskt."}
+                                </p>
+                                {ev && !ev.passed && ev.nextStep && (
+                                  <p className="font-whiteboard text-lg text-amber-700 pl-6">
+                                    Nästa steg: {ev.nextStep}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {(() => {
+                            const evs = diagSteps
+                              .map((s) => diagResults[s.id])
+                              .filter((r): r is Evaluation => !!r && typeof r === "object");
+                            const passedCount = evs.filter((e) => e.passed).length;
+                            return (
+                              <p className="font-whiteboard text-xl sm:text-2xl text-sky-800 pt-2">
+                                Du klarade {passedCount} av {diagSteps.length} frågor helt utan stöd
+                                på en lång text. Under lektionen nådde du textnivå{" "}
+                                {adaptState.level} av 3.{" "}
+                                {passedCount >= 4
+                                  ? "Nästa gång börjar vi på en högre nivå!"
+                                  : "Nästa gång tränar vi mer på det som står under Nästa steg."}
+                              </p>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* KNAPPAR EFTER ÅTERKOPPLING */}
                   {boardStage === "showing_feedback" && (
-                    <div className="pt-4">
-                      {!isLastStep ? (
+                    <div className="pt-4 flex flex-wrap gap-2">
+                      {canRetry ? (
+                        <>
+                          <button
+                            onClick={handleRetry}
+                            className="inline-flex items-center gap-2 rounded-full bg-amber-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-amber-700 transition shadow-sm"
+                          >
+                            <RotateCcw size={14} />
+                            <span>Förbättra mitt svar</span>
+                          </button>
+                          <button
+                            onClick={handleProceedToNextStep}
+                            className="inline-flex items-center gap-2 rounded-full border border-zinc-300 px-5 py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition"
+                          >
+                            <span>Gå vidare</span>
+                            <ArrowRight size={14} />
+                          </button>
+                        </>
+                      ) : !isLastStep ? (
                         <button
                           onClick={handleProceedToNextStep}
                           className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 transition shadow-sm"
@@ -705,98 +972,170 @@ export default function CompleteWhiteboardSystem() {
                           <span>Redo för nästa steg</span>
                           <ArrowRight size={14} />
                         </button>
-                      ) : (
-                        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-5 py-2 text-xs font-semibold text-white">
-                          <Check size={14} />
-                          <span>Alla steg genomförda!</span>
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                   )}
+                  {isLastStep && !diagPending && (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-5 py-2 text-xs font-semibold text-white">
+                      <Check size={14} />
+                      <span>Alla steg genomförda!</span>
+                    </div>
+                  )}
+                  <div ref={boardEndRef} />
                 </div>
               )}
             </div>
 
-            {/* INMATNINGSKAPSEL LÄNGST NER (endast synlig när uppgiften är aktiv för fritext) */}
-            {boardStage === "active_task" &&
-              (currentStep.stepType === "free_text" ||
-                currentStep.stepType === "final_exam") && (
-                <form onSubmit={handleFreeTextSubmit} className="mt-4">
-                  <div className="flex items-center rounded-full border-2 border-zinc-700 bg-white px-5 py-2.5 shadow-md">
-                    <input
-                      value={freeText}
-                      onChange={(e) => setFreeText(e.target.value)}
-                      placeholder={
-                        currentStep.placeholder || "Här skriver eleven sitt svar..."
-                      }
-                      disabled={isSubmitting}
-                      className="w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!freeText.trim() || isSubmitting}
-                      className="ml-2 rounded-full bg-zinc-900 px-5 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-30"
-                    >
-                      Svara
-                    </button>
-                  </div>
-                </form>
-              )}
+            {/* FRITEXT-INMATNING */}
+            {boardStage === "active_task" && task.kind === "free" && (
+              <form onSubmit={handleFreeTextSubmit} className="mt-4">
+                <div className="flex items-end gap-2 rounded-2xl border-2 border-zinc-700 bg-white px-4 py-2.5 shadow-md">
+                  <textarea
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleFreeTextSubmit();
+                    }}
+                    rows={3}
+                    placeholder={
+                      (!supportFree && task.placeholder) || "Skriv ditt svar här..."
+                    }
+                    disabled={isSubmitting}
+                    className="w-full resize-none bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400 select-text"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!freeText.trim() || isSubmitting}
+                    className="shrink-0 rounded-full bg-zinc-900 px-5 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-30"
+                  >
+                    {isSubmitting ? "Edda läser..." : "Svara"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
-          {/* HÖGER: FAST TEXTKORT MED UPPLÄSNING */}
-          <div className="lg:col-span-5 flex flex-col justify-between rounded-3xl bg-white border border-zinc-200/90 p-8 shadow-sm min-h-[560px]">
-            <div>
-              {/* Sidhuvud med Lyssna-knapp */}
-              <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-4">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                  Lästext för övningen
-                </span>
-                <button
-                  onClick={toggleReadAloud}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                    isPlayingAudio
-                      ? "bg-red-50 text-red-600 border border-red-200"
-                      : "bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
-                  }`}
-                >
-                  {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                  <span>{isPlayingAudio ? "Pausa" : "Lyssna"}</span>
-                </button>
+          {/* ================================================================ */}
+          {/* HÖGER: LÄSTEXT                                                    */}
+          {/* ================================================================ */}
+          <div className="lg:col-span-5 flex flex-col justify-between rounded-3xl bg-white border border-zinc-200/90 p-8 shadow-sm min-h-[560px] lg:h-[680px]">
+            {step.text ? (
+              <div className="flex flex-col min-h-0">
+                <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-4">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                    {step.text.source || "Lästext"}
+                  </span>
+                  {!supportFree && (
+                    <button
+                      onClick={toggleReadAloud}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                        isPlayingAudio
+                          ? "bg-red-50 text-red-600 border border-red-200"
+                          : "bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
+                      }`}
+                    >
+                      {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                      <span>{isPlayingAudio ? "Pausa" : "Lyssna"}</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="overflow-y-auto pr-1 min-h-0">
+                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">{step.text.title}</h3>
+                  <div className="text-sm sm:text-base leading-relaxed text-zinc-700 font-serif space-y-3 select-text">
+                    {paragraphs.map((p, i) => (
+                      <p
+                        key={i}
+                        className={p === step.text?.signature ? "text-right italic text-sm" : ""}
+                      >
+                        {renderHighlighted(p, highlights)}
+                      </p>
+                    ))}
+                  </div>
+
+                  {showGlossary && (
+                    <div className="mt-5 rounded-xl bg-zinc-50 border border-zinc-100 p-3">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                        Ord att känna till
+                      </p>
+                      <ul className="space-y-1 text-sm text-zinc-700">
+                        {step.text.glossary!.map((g) => (
+                          <li key={g.term}>
+                            <span className="font-semibold">{g.term}</span>: {g.meaning}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              {/* Textstyckets titel och innehåll */}
-              <h3 className="text-base font-semibold text-zinc-900 mb-3">
-                {currentStep.sideText.title}
-              </h3>
-
-              <div className="text-sm sm:text-base leading-relaxed text-zinc-700 font-serif space-y-3 italic">
-                <p>
-                  {currentStep.sideText.highlightPhrase
-                    ? currentStep.sideText.body
-                        .split(currentStep.sideText.highlightPhrase)
-                        .map((chunk, i, arr) => (
-                          <span key={i}>
-                            {chunk}
-                            {i < arr.length - 1 && (
-                              <span className="bg-[#FEF08A] not-italic px-1 py-0.5 rounded-xs font-medium text-zinc-950">
-                                {currentStep.sideText.highlightPhrase}
-                              </span>
-                            )}
-                          </span>
-                        ))
-                    : currentStep.sideText.body}
+            ) : step.phase === "aterkallning" ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 text-zinc-400">
+                <Brain size={36} />
+                <p className="text-base font-semibold text-zinc-600">Inget textstöd</p>
+                <p className="text-sm max-w-xs">
+                  Nu befäster du det du har lärt dig genom att svara helt ur minnet.
                 </p>
               </div>
-            </div>
+            ) : (
+              <LessonOverview currentPart={step.part} />
+            )}
 
-            {/* Pedagogisk fotnot på textkortet */}
             <div className="pt-4 border-t border-zinc-100 text-[11px] text-zinc-400">
-              💡 Texten spelas upp först så att du hinner ta in innehållet innan uppgiften visas på tavlan.
+              {step.phase === "modellering"
+                ? "💡 Gula markeringar visar vad Edda lägger märke till när hon tänker högt."
+                : step.phase === "traning"
+                  ? "💡 Behöver du hjälp? Be om en ledtråd på tavlan, så markerar Edda var du ska titta."
+                  : supportFree
+                    ? "🎯 Utan stöd: ingen uppläsning, inga markeringar och inga ledtrådar."
+                    : "💡 Edda anpassar texterna efter dina intressen och hur det går för dig."}
             </div>
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+// ============================================================================
+// Översikt över lektionen (visas i textkortet när det inte finns någon text)
+// ============================================================================
+
+function LessonOverview({ currentPart }: { currentPart: number }) {
+  const items = [
+    ...PARTS.map((p) => ({ part: p.part, title: p.title })),
+    { part: 5, title: "Slutdiagnos: lång text utan stöd" },
+  ];
+  return (
+    <div className="space-y-4">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 pb-4">
+        Så här går lektionen till
+      </p>
+      <ol className="space-y-3">
+        {items.map((it) => (
+          <li
+            key={it.part}
+            className={`flex items-start gap-3 text-sm ${
+              it.part < currentPart
+                ? "text-zinc-400"
+                : it.part === currentPart
+                  ? "text-zinc-900 font-semibold"
+                  : "text-zinc-600"
+            }`}
+          >
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-bold">
+              {it.part < currentPart ? "✓" : it.part}
+            </span>
+            <span>{it.title}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs text-zinc-500 leading-relaxed">
+        I varje del: <strong>1. Modellering</strong> (Edda tänker högt och visar ett bra
+        exempel) → <strong>2. Träna själv</strong> (med ledtrådar om du behöver) →{" "}
+        <strong>3. Återkalla utan stöd</strong>. Texterna börjar korta och blir längre ju
+        säkrare du blir.
+      </p>
+    </div>
   );
 }

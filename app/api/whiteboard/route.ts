@@ -2,17 +2,27 @@ import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 
 const SYSTEM_PROMPT = `
-Du är 'Edda', en pedagogisk svensklärare som undervisar direkt på en fysisk whiteboard.
-Det finns ingen chatt. Du skriver kommentarer med whiteboard-pennan.
+Du är 'Edda', en pedagogisk svensklärare som undervisar direkt på en fysisk whiteboard för elever på högstadiet.
+Det finns ingen chatt. Du skriver korta kommentarer med whiteboardpennan.
 
 DINA REGLER VID BEDÖMNING (Hattie & Sadler):
-1. Analysera elevens svar mot det specifika kursmålet och textutdraget.
-2. Förklara vad eleven gjort bra (strength).
-3. Ge ETT konkret nästa steg (nextStep):
-   - Vid sammanfattning: kontrollera om både förslag och hinder finns med.
-   - Vid resonemang: kontrollera om eleven har en orsakskedja (orsak -> konsekvens).
-   - Vid läsa mellan raderna: kontrollera om eleven dragit en logisk slutsats som inte står ordagrant.
-4. Skriv en handskriven kommentar (boardFeedback) som visas direkt på tavlan med whiteboardpennan (max 2 korta meningar).
+1. Bedöm elevens svar mot frågan, bedömningsmålet och textunderlaget. Hitta inte på fakta som inte står i texten.
+2. strength: vad eleven har gjort bra (konkret, en mening).
+3. nextStep: ETT konkret nästa steg (en mening). Ge aldrig hela facit.
+4. boardFeedback: en handskriven kommentar på tavlan (max 2 korta meningar, enkel svenska).
+5. passed: true om svaret i huvudsak uppfyller bedömningsmålet. På textnivå 1 räcker det att kärnan finns med. På nivå 3 krävs mer precision.
+
+VAD DU KONTROLLERAR PER KATEGORI:
+- texttyp: rätt texttyp och syfte, motiverat med konkreta drag ur texten.
+- pa_raderna: korrekt information som står uttryckligen i texten.
+- mellan_raderna: en logisk slutsats som inte står ordagrant, stödd av ledtrådar i texten.
+- sammanfatta: ämne och huvudpoänger (båda sidor om det finns), inga detaljer eller egna åsikter, egna ord.
+- resonera: ställningstagande, belägg ur texten, orsak → följd i minst två led, gärna andra sidan.
+
+FASER:
+- traning: eleven tränar med stöd. Var stöttande. nextStep ska vara en ledtråd som hjälper eleven att förbättra just det här svaret.
+- aterkallning: eleven svarar helt utan stöd. Bedöm självständigt. nextStep ska vara något att tänka på nästa gång.
+- diagnos: slutdiagnos. Var saklig och kortfattad.
 
 Svara alltid i strikt JSON enligt schemat.
 `;
@@ -40,16 +50,20 @@ export async function POST(request: NextRequest) {
     }
 
     const openai = new OpenAI({ apiKey });
-    const { stepId, category, studentAnswer, rubricTarget, sideText } = await request.json();
+    const { stepId, category, phase, level, question, studentAnswer, rubricTarget, sideText } =
+      await request.json();
 
     const promptContext = `
 STEG-ID: ${stepId}
 KATEGORI: ${category}
+FAS: ${phase || "traning"}
+TEXTNIVÅ: ${level || 2} av 3
+FRÅGA: ${question || "(ingen fråga angiven)"}
 BEDÖMNINGSMÅL: ${rubricTarget || "Kärnfull förståelse och underbyggt resonemang."}
 TEXTUNDERLAG:
-"${sideText}"
+"${sideText || "(Ingen text – eleven svarar ur minnet om strategin.)"}"
 
-ELEVENS INDIVIDUELLA SVAR:
+ELEVENS SVAR:
 "${studentAnswer}"
 `;
 
@@ -72,13 +86,15 @@ ELEVENS INDIVIDUELLA SVAR:
 
     const result = JSON.parse(completion.choices[0]?.message?.content || "{}");
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error("Whiteboard-bedömning misslyckades:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       {
         passed: true,
-        strength: "God reflektion!",
-        nextStep: "Fortsätt bygga på ditt resonemang med fler led.",
-        boardFeedback: "Bra reflekterat! Vi tar nästa steg framåt på tavlan.",
+        strength: "",
+        nextStep: "",
+        boardFeedback: "",
+        error: "AI-bedömningen kunde inte genomföras.",
       },
       { status: 200 }
     );

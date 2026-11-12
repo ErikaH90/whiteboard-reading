@@ -59,9 +59,9 @@ export async function POST(request: NextRequest) {
         "Cache-Control": "no-store",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error?.message || "Kunde inte generera ljud från ElevenLabs." },
+      { error: (error instanceof Error && error.message) || "Kunde inte generera ljud från ElevenLabs." },
       { status: 500 }
     );
   }
