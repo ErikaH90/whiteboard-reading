@@ -47,19 +47,24 @@ export const DEL4: PartDefinition = {
         "Frågan är: 'Är fyradagarsvecka en bra idé för elever?' Nu visar jag hur jag bygger ett utvecklat resonemang, steg för steg och med stöd i texten.",
       thoughts: [
         {
+          label: "Påstående: ta ställning",
           text: "Steg 1, påstående: Jag tar ställning. 'Fyradagarsvecka kan vara bra för en del elever, men inte för alla.'",
         },
         {
+          label: "Belägg från texten",
           text: "Steg 2, belägg: Jag hämtar stöd i texten. Lärarna berättar att eleverna var piggare och att färre var sjuka.",
           highlight: "eleverna var piggare och att färre var sjuka",
         },
         {
+          label: "Förklara med 'eftersom'",
           text: "Steg 3, förklaring: Jag förklarar VARFÖR med 'eftersom'. Eftersom eleverna får en extra dag att vila, orkar de mer på lektionerna...",
         },
         {
+          label: "Följd: vad leder det till?",
           text: "Steg 4, följd: Vad LEDER det till? '...vilket kan leda till att de lär sig mer.' Nu har jag en kedja i flera led.",
         },
         {
+          label: "Andra sidan: motargument",
           text: "Steg 5, andra sidan: Ett starkt resonemang tar med motargument. 'Samtidigt blir dagarna längre, och vissa elever är helt slut när de kommer hem.'",
           highlight: "Vissa elever säger att de är helt slut när de kommer hem.",
         },

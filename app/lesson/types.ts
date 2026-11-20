@@ -80,7 +80,11 @@ export type ThinkAloudTask = {
   kind: "think_aloud";
   category: QuestionCategory;
   intro: string;
-  thoughts: { text: string; highlight?: string }[];
+  /**
+   * En tanke i taget. `label` är stödordet som står på tavlan medan Edda
+   * säger `text` – eleven ska inte behöva läsa och lyssna på samma mening.
+   */
+  thoughts: { label: string; text: string; highlight?: string }[];
   summary: string;
 };
 

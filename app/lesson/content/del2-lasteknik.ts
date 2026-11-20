@@ -25,23 +25,28 @@ export const DEL2: PartDefinition = {
         "Nu visar jag HUR jag läser. Jag läser inte allt på samma sätt. Jag väljer lästeknik efter vad jag letar efter.",
       thoughts: [
         {
+          label: "Skumläsa för överblick",
           text: "Först skumläser jag rubriken och första meningen i varje stycke. Då ser jag att texten handlar om sömn, om varför unga sover för lite och om ett försök på en skola.",
           highlight:
             "Tonåringar behöver mellan åtta och tio timmars sömn per natt.",
         },
         {
+          label: "Sökläsa: på raderna",
           text: "Om frågan är 'Hur mycket sömn behöver tonåringar?' sökläser jag efter siffror. Svaret står ordagrant: åtta till tio timmar. Det kallas att läsa PÅ raderna.",
           highlight: "mellan åtta och tio timmars sömn",
         },
         {
+          label: "Leta ledtrådar",
           text: "Nu kommer en svårare fråga: Vad tycker skribenten om mobilen? Det står inte 'mobilen är dålig'. Men mobilen nämns som en förklaring till att unga sover för lite. Det är en ledtråd.",
           highlight: "En annan är mobilen.",
         },
         {
+          label: "Närläsa exemplet",
           text: "Jag närläser försöket. Frånvaron halverades och eleverna blev piggare. Skribenten skriver inte rakt ut att skolan borde börja senare. Men varför skulle exemplet annars vara med?",
           highlight: "frånvaron från första lektionen nästan halverats",
         },
         {
+          label: "Slutsats mellan raderna",
           text: "Min slutsats MELLAN raderna: skribenten antyder att en senare skolstart kan vara bra för unga. Jag kombinerar ledtrådarna i texten med min egen logik, för det står inte ordagrant.",
         },
       ],

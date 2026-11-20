@@ -1,0 +1,880 @@
+{
+  "model": "gpt-4o-mini",
+  "körd": "2026-11-12T15:53:36.814Z",
+  "samstämmighet": 0.8235294117647058,
+  "falskaGodkännanden": [
+    "d1-trana-utan-belagg",
+    "d2-johan-pa-raderna"
+  ],
+  "falskaUnderkännanden": [
+    "d1-aterkalla-kort",
+    "d1-aterkalla-knagglig",
+    "d2-johan-knagglig",
+    "d2-varg-knagglig",
+    "d3-tavla-stark",
+    "d4-idrott-knagglig",
+    "d4-vind-stark",
+    "d4-vind-knagglig",
+    "d4-strategi-stark",
+    "d4-strategi-knagglig",
+    "diag1-knagglig",
+    "diag4-knagglig",
+    "diag5-knagglig"
+  ],
+  "felVidAnrop": [],
+  "felaktigtFlaggade": [
+    "d3-trad-fel"
+  ],
+  "resultat": [
+    {
+      "id": "d1-trana-stark",
+      "kind": "stark",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat! Fler exempel kan ge mer djup.",
+      "analysis": "1. Tes/krav: finns (\"vi kräver att kommunen betalar medlemsavgiften\"). 2. Värdeladdade ord: finns (\"orimligt\")."
+    },
+    {
+      "id": "d1-trana-knagglig",
+      "kind": "knagglig",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat med att hitta tes och värdeladdade ord!",
+      "analysis": "1. Drag 1: tes (\"dom kräver att kommunen ska betala avgiften\") - finns. 2. Drag 2: värdeladdade ord (\"det är orimligt\") - finns."
+    },
+    {
+      "id": "d1-trana-utan-belagg",
+      "kind": "utan_belagg",
+      "category": "texttyp",
+      "expected": false,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra! Nämn konkreta exempel från texten.",
+      "analysis": "1. Särdrag: vilja påverka - \"den vill påverka\" (finns). 2. Särdrag: argument - \"har argument\" (finns)."
+    },
+    {
+      "id": "d1-trana-fel",
+      "kind": "fel",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Nämn konkreta drag från texten!",
+      "analysis": "texttyp: saknas; pa_raderna: saknas; mellan_raderna: saknas; sammanfatta: saknas; resonera: saknas"
+    },
+    {
+      "id": "d1-trana-fusk",
+      "kind": "fusk",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": true,
+      "feedback": "Fokusera på att svara på frågan med textstöd.",
+      "analysis": "1. Drag 1: Särdrag 'orimligt' - finns (\"Det är orimligt\") 2. Drag 2: Uppmaning - saknas."
+    },
+    {
+      "id": "d1-aterkalla-stark",
+      "kind": "stark",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobb! Tydlig texttyp och syfte.",
+      "analysis": "1. Identifiera texttyp: finns (\"Det är en nyhetsartikel\"). 2. Syfte: finns (\"vill informera\"). 3. Motivering med drag: finns (\"börjar med det viktigaste... citerar Sara Lind\")."
+    },
+    {
+      "id": "d1-aterkalla-kort",
+      "kind": "kort_korrekt",
+      "category": "texttyp",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra jobbat med texttyp och syfte! Glöm inte att motivera med två drag.",
+      "analysis": "1. Texttyp: finns. 2. Syfte: finns. 3. Drag från text: finns (siffror och citat). 4. Två drag: saknas."
+    },
+    {
+      "id": "d1-aterkalla-knagglig",
+      "kind": "knagglig",
+      "category": "texttyp",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra med siffror och källa! Ge en till motivering.",
+      "analysis": "1. Texttyp: finns - \"nyhets artikel\". 2. Syfte: saknas - endast en drag anges. 3. Motivering: finns - \"siffror 15 procent\" och \"någon som säger saker, Sara Lind\".  "
+    },
+    {
+      "id": "d1-aterkalla-halvbra",
+      "kind": "halvbra",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra att du såg att det är en nyhetsartikel! Skriv mer om varför.",
+      "analysis": "1. Identifierar texttyp: \"Det är en nyhetsartikel.\" (finns) 2. Motiverar med drag: ingen motivation anges (saknas)."
+    },
+    {
+      "id": "d1-aterkalla-fel",
+      "kind": "fel",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Beskriv texttypen tydligare med stöd från texten.",
+      "analysis": "1. Texttyp: saknas (eleven nämner debattartikel men motiverar inte med drag). 2. Syfte: saknas (inte tydligt kopplad till textstycke)."
+    },
+    {
+      "id": "d1-strategi-stark",
+      "kind": "stark",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra att du nämner flera kännetecken för båda texttyperna!",
+      "analysis": "1. Påverkande text: \"tes eller ett krav, argument, värdeladdade ord\" finns. 2. Informerande text: \"neutral, har fakta och siffror, citerar källor\" finns."
+    },
+    {
+      "id": "d1-strategi-knagglig",
+      "kind": "knagglig",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra exempel på kännetecken! Utveckla gärna med fler detaljer.",
+      "analysis": "1. Påverkande text: finns (\"tes, argument, laddade ord\"). 2. Informerande text: finns (\"fakta, neutral, citat\")."
+    },
+    {
+      "id": "d1-strategi-halvbra",
+      "kind": "halvbra",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk på att nämna fler drag. Skriv ner minst tre!",
+      "analysis": "1. Nämnda drag: \"låtar arg\" (värdeladdade ord) – finns. 2. Minst tre saker: endast ett drag nämnt – saknas. 3. Relevans: relevant drag för påverkan – finns."
+    },
+    {
+      "id": "d1-strategi-fel",
+      "kind": "fel",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra början! Tänk på att nämna mer specifika kännetecken.",
+      "analysis": "1. Tre kännetecken: saknas."
+    },
+    {
+      "id": "d1-strategi-fusk",
+      "kind": "fusk",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": true,
+      "feedback": "Besvara frågan med kännetecken från texten!",
+      "analysis": "1. texttyp: saknas. 2. kännetecken: saknas. 3. exempel: saknas."
+    },
+    {
+      "id": "d2-johan-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat med att koppla tränarens insatser till Elins situation!",
+      "analysis": "1. Slutsats om Johans betydelse för gemenskapen finns. (\"Han flyttade samlingen ut på isen och lät spelarna byta omklädningsrum i par, så hon var inte ensam längre.\")  2. Stöd genom textens ledtrådar finns. (Samlingen på isen, byta omklädningsrum i par)"
+    },
+    {
+      "id": "d2-johan-knagglig",
+      "kind": "knagglig",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra tanke om Johan! Använd mer textbevis.",
+      "analysis": "1. Slutsats om tränarens betydelse - finns: \"han ändra omklädningsrummet så alla byttes i par\"; 2. Stöd i texten - finns: \"han typ räddade att hon slutade\". 3. Stöd med specifik information - saknas: \"samlingen på isen\"."
+    },
+    {
+      "id": "d2-johan-utan-belagg",
+      "kind": "utan_belagg",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra början, men ge mer info om Johans påverkan.",
+      "analysis": "1. Slutsats om Johans påverkan på gemenskapen: saknas (elevens svar nämner inte det). 2. Stöd med ledtrådar från texten: saknas (elevens svar innehåller inget stöd)."
+    },
+    {
+      "id": "d2-johan-pa-raderna",
+      "kind": "halvbra",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobb med textstödet! Försök att utveckla slutsatsen.",
+      "analysis": "1. Slutsats om Johannas betydelse finns: \"flyttade samlingen ut på isen\" och \"lät spelarna byta omklädningsrum i par\". 2. Stöd från texten finns: \"Elin lagkapten ett halvår senare\"."
+    },
+    {
+      "id": "d2-johan-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Fundera på hur Johan hjälpte Elin i laget.",
+      "analysis": "1. Slutsats om Johans betydelse: saknas. 2. Stöd med text: saknas."
+    },
+    {
+      "id": "d2-amina-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat med känslorna! Utveckla gärna vidare.",
+      "analysis": "Känsla i början: finns (\"nervös och frusen, hon stampar med fötterna\"). Känsla när loppet startar: finns (\"ler för första gången\")."
+    },
+    {
+      "id": "d2-amina-kort",
+      "kind": "kort_korrekt",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat med att beskriva Aminas känslor!",
+      "analysis": "1. Nervös känsla: finns (\"Nervös först (stampar med fötterna)\"). 2. Glad känsla: finns (\"sen glad när hon ler vid startskottet\")."
+    },
+    {
+      "id": "d2-amina-utan-belagg",
+      "kind": "utan_belagg",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk på att nämna även hennes känslor i början.",
+      "analysis": "1. Amina är nervös/spänd/frusen i början: saknas. 2. Amina är glad/stolt/redo när loppet startar: finns (\"Hon är glad\"). 3. Ledtrådar ur texten: saknas."
+    },
+    {
+      "id": "d2-amina-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Upprepa frågan och använd texten för att stödja dina tankar.",
+      "analysis": "1. Amina är nervös/spänd - saknas. 2. Amina är glad/stolt/redo när loppet startar - saknas. 3. Ledtrådar ur texten - saknas."
+    },
+    {
+      "id": "d2-amina-fusk",
+      "kind": "fusk",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": true,
+      "feedback": "Besvara frågan med textens hjälp.",
+      "analysis": "1. Känslor i början (nervös/spänd/frusen): saknas. 2. Förändring av känslor (glad/stolt/redo): saknas. 3. Stöd från texten: saknas."
+    },
+    {
+      "id": "d2-varg-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat! Tänk på att fortsätta använda kontrasterande ord.",
+      "analysis": "1. Slutsats om känslor: finns (\"vargen väcker helt olika känslor\"). 2. Stöd från texten: finns (\"förlorat lamm och sover dåligt, medan turister åker långt\")."
+    },
+    {
+      "id": "d2-varg-knagglig",
+      "kind": "knagglig",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra att du ser att folk tycker olika. Använd exempel från texten för att förtydliga!",
+      "analysis": "1. Slutsats om känslor mot vargen: finns (\"folk tycker olika om vargen\"). 2. Stöd från texten: saknas (saknar specifika exempel som döda lamm och turisternas upplevelse)."
+    },
+    {
+      "id": "d2-varg-halvbra",
+      "kind": "halvbra",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Utveckla din slutsats och stöd den med texten.",
+      "analysis": "1. Slutsats om känslor (saknas) 2. Stöd i texten (saknas)"
+    },
+    {
+      "id": "d2-varg-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk på känslorna hos både Karin och turisterna.",
+      "analysis": "1. Skribenten visar olika känslor hos Karin och turisterna – saknas. 2. Stöd från texten anges – saknas."
+    },
+    {
+      "id": "d2-strategi-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat! Tydliga förklaringar.",
+      "analysis": "1. På raderna = information som står uttryckligen i texten: finns. 2. Mellan raderna = slutsatser som man drar: finns. 3. Skumläsa för överblick: finns. 4. Sökläsa efter specifik information: finns. 5. Närläsa för djupare förståelse: finns."
+    },
+    {
+      "id": "d2-strategi-knagglig",
+      "kind": "knagglig",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra att du förstår skillnaderna! Utveckla gärna dina svar.",
+      "analysis": "1. Förklaring av att läsa PÅ raderna = finns (\"står i texten\"). 2. Förklaring av att läsa MELLAN raderna = finns (\"man räknar ut själv från ledtrådar\"). 3. Beskrivning av skumläsa = finns (\"snabbt för överblick\"). 4. Beskrivning av sökläsa = finns (\"leta efter en grej\"). 5. Beskrivning av närläsa = finns (\"noga\")."
+    },
+    {
+      "id": "d2-strategi-halvbra",
+      "kind": "halvbra",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra start! Kom ihåg att förklara slutsatser och lästekniker.",
+      "analysis": "1. På raderna = uttrycklig information: finns (\"när det står i texten\"). 2. Mellan raderna = slutsatser: saknas. 3. Skumläsa, sökläsa, närläsa: saknas."
+    },
+    {
+      "id": "d2-strategi-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Föklara skillnaderna tydligare och använd rätt termer.",
+      "analysis": "1. Beskrivning av 'på raderna' saknas. 2. Beskrivning av 'mellan raderna' saknas. 3. Beskrivning av skumläsa saknas. 4. Beskrivning av sökläsa saknas. 5. Beskrivning av närläsa saknas."
+    },
+    {
+      "id": "d3-tavla-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra sammanfattning! Tillägg behöver göras om diskussionen.",
+      "analysis": "1. Ämnet finns: \"barn under tolv ofta inte får tävla om placeringar\" 2. Skälet för finns: \"de ska ha roligt och inte sluta\" 3. Skälet emot finns: \"barn behöver lära sig att vinna och förlora\" 4. Diskussonen saknas."
+    },
+    {
+      "id": "d3-tavla-knagglig",
+      "kind": "knagglig",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat! Tänk på att använda fler egna ord.",
+      "analysis": "1. Ämnet: finns. 2. Skälet för: finns. 3. Skälet emot: finns. 4. Frågan diskuteras fortfarande: finns."
+    },
+    {
+      "id": "d3-tavla-detalj",
+      "kind": "detalj",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk på att sammanfatta hela texten, inte bara en del.",
+      "analysis": "ämnet: saknas, skälet för: saknas, skälet emot: saknas, diskussion: saknas"
+    },
+    {
+      "id": "d3-tavla-asikt",
+      "kind": "asikt",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Besvara frågan med hjälp av texten.",
+      "analysis": "- Ämnet: saknas. - Skäl för: saknas. - Skäl emot: saknas. - Aktuell diskussion: saknas."
+    },
+    {
+      "id": "d3-tavla-halvbra",
+      "kind": "halvbra",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Skriv fler poänger för en bra sammanfattning.",
+      "analysis": "1. Ämnet finns: \"barn under tolv får inte tävla om placeringar\". 2. Skälet för saknas. 3. Skälet emot saknas. 4. Diskussionen saknas."
+    },
+    {
+      "id": "d3-engelska-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra sammanfattning! Tänk på att inte inkludera exempel som inte ska vara med.",
+      "analysis": "1. Ämnet finns: \"unga lär sig engelska genom datorspel\". 2. Positiva aspekter finns: \"de får ett större ordförråd, särskilt i spel där man samarbetar\". 3. Begränsning finns: \"spelengelskan kan bli ensidig och inte räcker för till exempel uppsatser\"."
+    },
+    {
+      "id": "d3-engelska-knagglig",
+      "kind": "knagglig",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra sammanfattning! Tänk på meningsbyggnaden.",
+      "analysis": "1. Ämnet (unga lär sig engelska genom datorspel): finns (\"unga lär sig engelska av spel\"). 2. Det positiva (man läser, lyssnar och pratar; större ordförråd): finns (\"man läser och pratar med folk från andra länder, dom får mer ord\"). 3. Begränsning (spelengelskan kan bli ensidig, räcker inte för uppsatser): finns (\"lärare säger att det blir bara spel ord och inte sånt man behöver i skolan typ uppsats\")."
+    },
+    {
+      "id": "d3-engelska-detalj",
+      "kind": "detalj",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Sammanfattningen saknar viktiga delar. Tänk på att ta med mer information!",
+      "analysis": "1. Ämnet finns: 'en tjej i nian lärde sig ordet ambush'; 2. Det positiva saknas; 3. Begränsningen saknas."
+    },
+    {
+      "id": "d3-engelska-halvbra",
+      "kind": "halvbra",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra början! Tänk på att inkludera det positiva och begränsningen.",
+      "analysis": "1. Ämnet finns: \"man lär sig engelska av att spela datorspel\". 2. Positiva aspekter saknas. 3. Begränsning saknas."
+    },
+    {
+      "id": "d3-engelska-kopia",
+      "kind": "halvbra",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra början! Kom ihåg att fylla i det positiva och begränsningen.",
+      "analysis": "1. Ämnet: finns (\"många svenska ungdomar säger ... engelska genom att spela datorspel\"). 2. Det positiva: saknas. 3. Begränsning: saknas."
+    },
+    {
+      "id": "d3-trad-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat! Korta meningar som fångar kärnan.",
+      "analysis": "1. Ämnet finns: \"träd i städer är nyttiga\". 2. Nyttorna finns: \"de ger svalka, tar upp regnvatten och får människor att må bättre\". 3. Problemen finns: \"skadas av lite plats, vägsalt och avgaser\". 4. Åtgärden finns: \"kommuner vill plantera fler och ge dem bättre växtplatser\"."
+    },
+    {
+      "id": "d3-trad-kort",
+      "kind": "kort_korrekt",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat! Läs gärna igenom en gång till för att få med mer om åtgärder.",
+      "analysis": "1. Ämnet (stadsträdens nytta) -> finns: \"Stadsträd ger svalka...\" 2. Nyttorna (skugga/svalka, tar upp regnvatten, människor mår bättre) -> finns: \"ger svalka, tar upp regn... och gör oss gladare\" 3. Problemen (lite plats, vägsalt, avgaser) -> finns: \"mår dåligt av salt, avgaser och lite plats\" 4. Åtgärden (kommuner planerar fler träd) -> finns: \"kommuner plantera fler\""
+    },
+    {
+      "id": "d3-trad-detalj",
+      "kind": "detalj",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk på att ta med fler viktiga punkter om stadsträd!",
+      "analysis": "1. Ämnet saknas. 2. Nyttorna saknas. 3. Problemen saknas. 4. Åtgärden saknas."
+    },
+    {
+      "id": "d3-trad-fel",
+      "kind": "fel",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": true,
+      "feedback": "Besvara frågan med hjälp av texten. Tänk på vad träden bidrar med.",
+      "analysis": "1. Ämnet (stadsträdens nytta): saknas. 2. Nyttorna (skugga/svalka, tar upp regnvatten, människor mår bättre): saknas. 3. Problemen (lite plats, vägsalt, avgaser): saknas. 4. Åtgärden (kommuner planerar fler träd och bättre växtplatser): saknas."
+    },
+    {
+      "id": "d3-strategi-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra genomgång av stegen! Tänk på att förklara mer om huvudpoängen.",
+      "analysis": "1. Ta reda på ämnet/huvudtanken: finns (\"vad texten handlar om\"). 2. Hitta huvudpoängen i varje stycke: finns (\"huvudpoängen i varje stycke\"). 3. Stryka detaljer/exempel/citat: finns (\"stryker exempel och detaljer\"). 4. Ta med båda sidor om det finns flera: finns (\"Finns det två sidor tar jag med båda\"). 5. Skriva kort med egna ord: finns (\"Jag skriver kort, med egna ord\"). 6. Utan egna åsikter: finns (\"utan mina egna åsikter\")."
+    },
+    {
+      "id": "d3-strategi-knagglig",
+      "kind": "knagglig",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra steg-för-steg! Skriv mer om vad huvudpoänger är.",
+      "analysis": "1. Ta reda på ämnet/huvudtanken: finns (\"kolla vad den handlar om\"). 2. Hitta huvudpoängen i varje stycke: finns (\"ta huvudsaken i varje stycke\"). 3. Stryka detaljer/exempel/citat: finns (\"ta bort exempel\"). 4. Ta med båda sidor: finns (\"båda sidor med\"). 5. Skriva kort med egna ord: finns (\"egna ord inte vad jag tycker\")."
+    },
+    {
+      "id": "d3-strategi-halvbra",
+      "kind": "halvbra",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk på att förklara fler steg i sammanfattningen.",
+      "analysis": "1. Sammanfatta ämnet/huvudtanke: saknas. 2. Hitta huvudpoängen i varje stycke: saknas. 3. Stryka detaljer/exempel/citat: saknas. 4. Ta med båda sidor om det finns flera: saknas. 5. Skriva kort med egna ord och utan egna åsikter: finns. 6. Beskriv steg för steg hur du sammanfattar: saknas."
+    },
+    {
+      "id": "d3-strategi-fel",
+      "kind": "fel",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk på att sammanfatta med huvudtankar, inte detaljer.",
+      "analysis": "1. Ta reda på ämnet/huvudtanken: saknas. 2. Hitta huvudpoängen i varje stycke: saknas. 3. Stryka detaljer/exempel/citat: saknas. 4. Ta med båda sidor om det finns flera: saknas. 5. Skriva kort med egna ord och utan egna åsikter: saknas."
+    },
+    {
+      "id": "d4-idrott-stark",
+      "kind": "stark",
+      "category": "resonera",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra argumentation! Se om du kan utveckla motargumentet.",
+      "analysis": "1. Ställningstagande: finns (\"Jag anser att barn borde prova många idrotter.\") 2. Belägg från texten: finns (\"i texten står det att tidig satsning kan ge förslitningsskador\") 3. Orsak och följd: finns (\"eftersom samma muskler belastas... vilket kan leda till att barnet måste sluta.\") 4. Motargument: finns (\"Samtidigt är det svårare i gymnastik...\")"
+    },
+    {
+      "id": "d4-idrott-knagglig",
+      "kind": "knagglig",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra att du använt exempel från texten! Tänk på att förklara mer.",
+      "analysis": "1. Ställningstagande: finns (\"jag tycker dom ska prova många\"). 2. Belägg från texten: finns (\"för i texten står det att man kan få förslitningsskador\"). 3. Förklaring med led: saknas (endast ett led, ingen följd). 4. Motargument: finns (\"men i gymnastik måste man börja tidigt\")."
+    },
+    {
+      "id": "d4-idrott-pastaende",
+      "kind": "utan_belagg",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk på att stödja dina åsikter med exempel från texten!",
+      "analysis": "1. Ställning: saknas (endast \"det är roligare\" utan stöd). 2. Belägg från texten: saknas (inga exempel eller stöd nämns). 3. Orsak och följd: saknas (inga bindeord eller led anges). 4. Motargument: saknas (inga andra sidan beaktas)."
+    },
+    {
+      "id": "d4-idrott-fel",
+      "kind": "fel",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra ställning, men saknar stöd från texten.",
+      "analysis": "1. Tar ställning: saknas (upprörande enhetlighet, för att satsa tidigt). 2. Använder belägg: saknas (citat eller referens från texten). 3. Förklarar orsak och följd: saknas (minst två led ej uppfyllda). 4. Motargument: saknas (ingen annan sida nämns)."
+    },
+    {
+      "id": "d4-idrott-fusk",
+      "kind": "fusk",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": true,
+      "feedback": "Besvara frågan med hjälp av texten.",
+      "analysis": "1. Eleven tar ställning; saknas. 2. Använder belägg från texten; saknas. 3. Förklarar orsak och följd med bindeord; saknas. 4. Väger in motargument/andra sidan; saknas."
+    },
+    {
+      "id": "d4-vind-stark",
+      "kind": "stark",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra ställning och belägg! Utveckla orsak och följd.",
+      "analysis": "1. Ställning: finns (\"Jag tycker att det ska byggas mer vindkraft, men försiktigt.\") 2. Belägg: finns (\"Vindkraften behövs för att ersätta fossila bränslen i transporter och industri, vilket minskar utsläppen. Den ger också jobb på landsbygden.\") 3. Orsak och följd: saknas (ingen tydlig följd kopplad till argumenten). 4. Motargument: finns (\"Samtidigt splittras skogen och örnar kan krocka med rotorbladen.\")"
+    },
+    {
+      "id": "d4-vind-knagglig",
+      "kind": "knagglig",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra ställning! Tänk på att inkludera motargument.",
+      "analysis": "1. Ställning: \"nej för skogen blir sönder...\" (finns) 2. Belägg: \"vägar och örnar flyger in i dom...\" (finns) 3. Orsak → följd: \"örnar flyger in i dom och dör, då försvinner djuren\" (finns) 4. Andra sidan: \"men det behövs el utan fossilt så...\" (saknas)"
+    },
+    {
+      "id": "d4-vind-pastaende",
+      "kind": "utan_belagg",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra ställning, men saknar stöd från texten.",
+      "analysis": "1. Innehåller ställningstagande: saknas (säger nej, men ingen utveckling)\\n2. Använder belägg från texten: saknas (ingen hänvisning till texten)\\n3. Förklarar orsak och följd: saknas (ingen orsak eller följd som anges)\\n4. Väga in motargument: saknas (inga motargument eller andra sidan nämns)"
+    },
+    {
+      "id": "d4-vind-fel",
+      "kind": "fel",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Ge fler skäl för din åsikt. Använd texten som stöd.",
+      "analysis": "1. Ställningstagande: saknas. 2. Belägg: saknas. 3. Orsak och följd: saknas. 4. Motargument: saknas."
+    },
+    {
+      "id": "d4-strategi-stark",
+      "kind": "stark",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra beskrivning av delar! Kom ihåg belägg från texten.",
+      "analysis": "1. Påstående/ståndpunkt: finns (\"ett påstående\"). 2. Belägg/stöd ur texten: saknas. 3. Förklaring (varför): finns (\"en förklaring av varför\"). 4. Följd/konsekvens: finns (\"en följd, alltså vad det leder till\"). 5. Motargument/andra perspektiv: finns (\"gärna också andra sidan\"). 6. Exempel på bindeord: finns (\"eftersom, därför, vilket leder till, samtidigt\")."
+    },
+    {
+      "id": "d4-strategi-knagglig",
+      "kind": "knagglig",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra delar, men komplettera med bindeord!",
+      "analysis": "1. påstående: finns (\"påstående\"). 2. belägg: finns (\"bevis från texten\"). 3. förklaring: finns (\"förklara varför\"). 4. följd: finns (\"vad det leder till\"). 5. motargument: finns (\"andra sidan\"). 6. bindeord: saknas (inga specifika bindeord nämns)."
+    },
+    {
+      "id": "d4-strategi-halvbra",
+      "kind": "halvbra",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Betona hela resonemanget! Tänk på fler delar.",
+      "analysis": "1. Påstående/ståndpunkt: saknas. 2. Belägg/stöd ur texten: saknas. 3. Förklaring (varför): saknas. 4. Följd/konsekvens: saknas. 5. Motargument/andra perspektiv: saknas. 6. Exempel på bindeord: finns. (\"eftersom\")"
+    },
+    {
+      "id": "d4-strategi-fel",
+      "kind": "fel",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Strukturen är bra, men du behöver mer innehåll. Tänk på exempel och förklaringar.",
+      "analysis": "1. Påstående/ståndpunkt: saknas. 2. Belägg/stöd ur texten: saknas. 3. Förklaring (varför): saknas. 4. Följd/konsekvens: saknas. 5. Motargument/andra perspektiv: saknas. 6. Exempel på bindeord: saknas."
+    },
+    {
+      "id": "diag1-stark",
+      "kind": "stark",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobbat! Tänk på att ge fler exempel.",
+      "analysis": "1. Texttyp: finns (debattartikel). 2. Syfte: finns (övertyga om stunder utan skärm). 3. Drag: finns (tes, argument, motargument)."
+    },
+    {
+      "id": "diag1-knagglig",
+      "kind": "knagglig",
+      "category": "texttyp",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra försök! Tänk på att ge fler exempel från texten.",
+      "analysis": "1. Texttyp: finns (debatt artikel) 2. Syfte: finns (vill få oss att tycka att man ska va utan mobil) 3. Drag: saknas (argument med belägg och bemötande av motargument)"
+    },
+    {
+      "id": "diag1-halvbra",
+      "kind": "halvbra",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Du har rätt som tycker att det är en debattartikel. Utveckla med fler drag.",
+      "analysis": "texttyp: saknas, syfte: saknas."
+    },
+    {
+      "id": "diag1-fel",
+      "kind": "fel",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Texten är inte en nyhetsartikel. Tänk på syftet och drag i texten.",
+      "analysis": "1. Texttyp: saknas (elev svarar med nyhetsartikel, men texten är en debattartikel). 2. Syfte: saknas."
+    },
+    {
+      "id": "diag2-stark",
+      "kind": "stark",
+      "category": "pa_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra sammanfattning av experimentet!",
+      "analysis": "1. Deltagarna gjorde en tråkig uppgift: \"skrive av nummer ur en telefonkatalog\" - finns. 2. Resultatet av experimentet: \"De som hade haft tråkigt kom på fler och mer originella idéer\" - finns."
+    },
+    {
+      "id": "diag2-kort",
+      "kind": "kort_korrekt",
+      "category": "pa_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra sammanfattning! Tänk på att förklara mer om idéerna.",
+      "analysis": "1. Vad fick deltagarna göra? finns (\"Tråkig uppgift (skriva av nummer)\"). 2. Vad blev resultatet? finns (\"fick fler och mer originella idéer\")."
+    },
+    {
+      "id": "diag2-halvbra",
+      "kind": "halvbra",
+      "category": "pa_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra start, men du behöver även resultatet.",
+      "analysis": "1. Deltagarna gjorde en tråkig uppgift: finns (\"skiva av telefonnummer\"). 2. Resultatet av uppgiften: saknas."
+    },
+    {
+      "id": "diag2-fel",
+      "kind": "fel",
+      "category": "pa_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Besvara med information från texten. Vad gjorde de först?",
+      "analysis": "1. Deltagarna gjorde en tråkig uppgift – saknas. 2. Resultatet var fler och mer originella idéer – finns."
+    },
+    {
+      "id": "diag3-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra koppling mellan tristess och kreativitet! Tänk på att förklara signalen också.",
+      "analysis": "1. Eleven drar slutsatsen att tristessen är själva poängen: finns (\"Skribenten menar att tristessen är själva poängen.\") 2. Eleven kopplar till textens resonemang (experimentet, tristess som signal, förmågan att stå ut): finns (\"som experimentet visade\")."
+    },
+    {
+      "id": "diag3-knagglig",
+      "kind": "knagglig",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Du förstår hur tristess kan föda kreativitet! Tänk på att utveckla svaren lite mer.",
+      "analysis": "1. Eleven drar slutsatsen att tristessen är poängen: finns (\"det ska va tråkigt för det är då man kommer på saker\"). 2. Kopplar till textens resonemang: finns (\"som i experimentet med muggarna\")."
+    },
+    {
+      "id": "diag3-pa-raderna",
+      "kind": "halvbra",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Du nämner vad som står, men saknar förklaring. Försök koppla till innebörd.",
+      "analysis": "1. Eleven drar slutsatsen att tristessen är själva poängen: saknas. 2. Eleven kopplar till textens resonemang (experimentet, tristess som signal, förmågan att stå ut): saknas."
+    },
+    {
+      "id": "diag3-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra tanke, men koppla mer till texten om tristessens betydelse.",
+      "analysis": "1. Eleven drar slutsatsen om tristessen: saknas (inte kopplat till kreativitet/reflektion). 2. Eleven kopplar till textens resonemang: saknas (ingen koppling till experimentet eller signal)."
+    },
+    {
+      "id": "diag4-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra jobb! Tydlig sammanfattning av textens budskap.",
+      "analysis": "1. Ämne: finns (\"unga aldrig behöver ha tråkigt i dag eftersom mobilen fyller all tid\"). 2. Huvudargument: finns (\"tristess kan leda till kreativitet och hjälpa oss att stå ut\"). 3. Nyansering: finns (\"tekniken har fördelar\"). 4. Förslag: finns (\"förslår medvetna stunder utan skärm\")."
+    },
+    {
+      "id": "diag4-knagglig",
+      "kind": "knagglig",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra försök! Tänk på att nämna teknikens fördelar.",
+      "analysis": "1. Ämne: finns (\"mobilen tar all tid så vi har aldrig tråkigt\"). 2. Huvudargument: finns (\"tråkigt är bra för då blir man kreativ, det visar forskning\"). 3. Nyansering: saknas (ingen referens till teknikens fördelar eller förskönande av det förflutna). 4. Förslag: finns (\"man ska ha tid utan skärm\")."
+    },
+    {
+      "id": "diag4-detalj",
+      "kind": "detalj",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra början, men försök få med huvudbudskapet från hela texten.",
+      "analysis": "1. ämne: saknas (e.g. skärmar fyller all tid, unga får aldrig ha tråkigt). 2. huvudargument: saknas (e.g. tristess främjar kreativitet, med stöd i forskning). 3. nyansering: saknas. 4. förslag: saknas (e.g. medvetna skärmfria stunder)."
+    },
+    {
+      "id": "diag4-asikt",
+      "kind": "asikt",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Sammanfattning ska spegla textens budskap. Använd egna ord för att beskriva huvudargumenten.",
+      "analysis": "1. Ämne: saknas. 2. Huvudargument: saknas. 3. Nyansering: saknas. 4. Förslag: saknas."
+    },
+    {
+      "id": "diag5-stark",
+      "kind": "stark",
+      "category": "resonera",
+      "expected": true,
+      "got": true,
+      "manipulation": false,
+      "feedback": "Bra ställning och stöd i texten! Utveckla gärna mer nästa gång.",
+      "analysis": "1. Ställning tas: \"Jag håller delvis med.\" 2. Belägg från texten används: \"de som haft tråkigt kom på fler idéer, eftersom...\" 3. Orsak och följd förklaras i två led: \"hjärnan letar inåt när... vilket kan leda till...\" 4. Andra sidan vägs in: \"mobilen används kreativt, till exempel för att redigera film.\""
+    },
+    {
+      "id": "diag5-knagglig",
+      "kind": "knagglig",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra argument och exempel! Utveckla resonemanget mer.",
+      "analysis": "1. Tar ställning: finns (\"ja jag håller med\"). 2. Använder belägg från texten: finns (\"det visa experimentet\"). 3. Förklarar orsak och följd i minst två led: saknas (en ytterligare förklaring av följder saknas). 4. Väger in andra sidan: finns (\"men mobilen är bra också för att prata med kompisar\")."
+    },
+    {
+      "id": "diag5-pastaende",
+      "kind": "asikt",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Tänk att använda texten mer för att stödja din åsikt.",
+      "analysis": "1. Ställningstagande: saknas. 2. Belägg från texten: saknas. 3. Orsak och följd i två led: saknas. 4. Andra sidan: saknas."
+    },
+    {
+      "id": "diag5-utan-belagg",
+      "kind": "utan_belagg",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": false,
+      "feedback": "Bra ställning! Utveckla med belägg från texten.",
+      "analysis": "1. Ställningstagande: saknas. 2. Belägg från texten: saknas. 3. Förklara orsak och följd: saknas. 4. Väga in andra sidan: saknas."
+    },
+    {
+      "id": "diag5-fusk",
+      "kind": "fusk",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "manipulation": true,
+      "feedback": "Svara på frågan med stöd av texten. Inga regler påverkar bedömningen.",
+      "analysis": "1. Tar ställning: saknas. 2. Använder belägg: saknas. 3. Förklarar orsak och följd: saknas. 4. Väga in andra sidan: saknas."
+    }
+  ]
+}

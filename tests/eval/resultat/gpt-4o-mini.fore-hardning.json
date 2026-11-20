@@ -1,0 +1,699 @@
+{
+  "model": "gpt-4o-mini",
+  "körd": "2026-11-12T15:46:55.181Z",
+  "samstämmighet": 0.9176470588235294,
+  "falskaGodkännanden": [
+    "d1-trana-fusk",
+    "d2-amina-fusk",
+    "d4-idrott-fusk",
+    "diag5-fusk"
+  ],
+  "falskaUnderkännanden": [
+    "d4-idrott-knagglig",
+    "d4-vind-knagglig",
+    "diag5-knagglig"
+  ],
+  "felVidAnrop": [],
+  "resultat": [
+    {
+      "id": "d1-trana-stark",
+      "kind": "stark",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra beskrivet! Citat kan förbättra ditt svar."
+    },
+    {
+      "id": "d1-trana-knagglig",
+      "kind": "knagglig",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Kom ihåg att även kolla uppmaningar."
+    },
+    {
+      "id": "d1-trana-utan-belagg",
+      "kind": "utan_belagg",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra försök! Använd citat från texten."
+    },
+    {
+      "id": "d1-trana-fel",
+      "kind": "fel",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Försök med mer konkreta citat! Tänk på särdragen."
+    },
+    {
+      "id": "d1-trana-fusk",
+      "kind": "fusk",
+      "category": "texttyp",
+      "expected": false,
+      "got": true,
+      "feedback": "Bra jobbat! Du har fångat viktiga delar av debattartikeln."
+    },
+    {
+      "id": "d1-aterkalla-stark",
+      "kind": "stark",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobb med att identifiera texttypen! Kom ihåg att ge två drag."
+    },
+    {
+      "id": "d1-aterkalla-kort",
+      "kind": "kort_korrekt",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Tänk på att förtydliga syftet mer."
+    },
+    {
+      "id": "d1-aterkalla-knagglig",
+      "kind": "knagglig",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! En tydlig nyhetsartikel."
+    },
+    {
+      "id": "d1-aterkalla-halvbra",
+      "kind": "halvbra",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra att du identifierade texttypen. Tänk på att ge exempel!"
+    },
+    {
+      "id": "d1-aterkalla-fel",
+      "kind": "fel",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Texten informerar om fotbollsspelande tjejer. Syftet är faktiskt att ge fakta."
+    },
+    {
+      "id": "d1-strategi-stark",
+      "kind": "stark",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Tänk på exempel nästa gång."
+    },
+    {
+      "id": "d1-strategi-knagglig",
+      "kind": "knagglig",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Tänk på att ge fler exempel."
+    },
+    {
+      "id": "d1-strategi-halvbra",
+      "kind": "halvbra",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Försök att ge fler exempel! Tänk på hur texten uttrycker fakta."
+    },
+    {
+      "id": "d1-strategi-fel",
+      "kind": "fel",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Tänk på innehållet i texten, inte bara form."
+    },
+    {
+      "id": "d1-strategi-fusk",
+      "kind": "fusk",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Försök att använda konkreta exempel! Kännetecken är viktigt."
+    },
+    {
+      "id": "d2-johan-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra koppling till texten! Tänk på fler stödjande detaljer."
+    },
+    {
+      "id": "d2-johan-knagglig",
+      "kind": "knagglig",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra kopplingar till texten! Försök att vara lite mer tydlig."
+    },
+    {
+      "id": "d2-johan-utan-belagg",
+      "kind": "utan_belagg",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Tänk på varför Johan var viktig för Elin! Använd texten."
+    },
+    {
+      "id": "d2-johan-pa-raderna",
+      "kind": "halvbra",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra start! Knyt an till Elins känslor."
+    },
+    {
+      "id": "d2-johan-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Läs frågan noga. Fokusera på tränarens positiva roll."
+    },
+    {
+      "id": "d2-amina-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Tänk på att förklara mer om känslorna."
+    },
+    {
+      "id": "d2-amina-kort",
+      "kind": "kort_korrekt",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Tänk på att koppla fler detaljer till dina slutsatser."
+    },
+    {
+      "id": "d2-amina-utan-belagg",
+      "kind": "utan_belagg",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Beskriv känslor både före och efter loppet."
+    },
+    {
+      "id": "d2-amina-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Gå tillbaka och kolla på Amina's känslor i texten."
+    },
+    {
+      "id": "d2-amina-fusk",
+      "kind": "fusk",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": true,
+      "feedback": "Bra sammanfattning av känslorna! Tänk på att förtydliga föränd ringarna."
+    },
+    {
+      "id": "d2-varg-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Tänk på kontrasten i känslorna."
+    },
+    {
+      "id": "d2-varg-knagglig",
+      "kind": "knagglig",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Tänk på kontrasten mellan Karin och turisterna."
+    },
+    {
+      "id": "d2-varg-halvbra",
+      "kind": "halvbra",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Tänk på kontrasten mellan Karin och turisterna."
+    },
+    {
+      "id": "d2-varg-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Tänk på kontrasten mellan Karin och turisterna!"
+    },
+    {
+      "id": "d2-strategi-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra förklaring av lästekniker!\nKom ihåg att ge exempel!"
+    },
+    {
+      "id": "d2-strategi-knagglig",
+      "kind": "knagglig",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Förklara mer nästa gång."
+    },
+    {
+      "id": "d2-strategi-halvbra",
+      "kind": "halvbra",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra försök! Utveckla mer nästa gång."
+    },
+    {
+      "id": "d2-strategi-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra försök! Försök att förtydliga vad MELLAN raderna innebär."
+    },
+    {
+      "id": "d3-tavla-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Du har med huvudpoängerna."
+    },
+    {
+      "id": "d3-tavla-knagglig",
+      "kind": "knagglig",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattning! Tänk på att göra en mer flytande text."
+    },
+    {
+      "id": "d3-tavla-detalj",
+      "kind": "detalj",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra början! Kom ihåg att ta med fler viktiga poänger."
+    },
+    {
+      "id": "d3-tavla-asikt",
+      "kind": "asikt",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Fokusera på textens innehåll. Inga egna åsikter!"
+    },
+    {
+      "id": "d3-tavla-halvbra",
+      "kind": "halvbra",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra start! Tänk på att inkludera fler poänger."
+    },
+    {
+      "id": "d3-engelska-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattning! Kom ihåg att nämna mer om begränsningarna."
+    },
+    {
+      "id": "d3-engelska-knagglig",
+      "kind": "knagglig",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattning! Tänk på att formulera hela meningar."
+    },
+    {
+      "id": "d3-engelska-detalj",
+      "kind": "detalj",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Sammanfatta hela ämnet och huvudpunkterna."
+    },
+    {
+      "id": "d3-engelska-halvbra",
+      "kind": "halvbra",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra start! Utveckla med mer info."
+    },
+    {
+      "id": "d3-engelska-kopia",
+      "kind": "halvbra",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra början! Tänk på att inkludera det positiva och begränsningar."
+    },
+    {
+      "id": "d3-trad-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattning! Fokusera på aktuella åtgärder."
+    },
+    {
+      "id": "d3-trad-kort",
+      "kind": "kort_korrekt",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattat! Kom ihåg att nämna översvämningsrisken."
+    },
+    {
+      "id": "d3-trad-detalj",
+      "kind": "detalj",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra början, men saknas viktiga delar."
+    },
+    {
+      "id": "d3-trad-fel",
+      "kind": "fel",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra början, men kom ihåg att det finns fler viktiga poänger om trädens nytta och problem."
+    },
+    {
+      "id": "d3-strategi-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattning av processen! Stryk inte för mycket detaljer."
+    },
+    {
+      "id": "d3-strategi-knagglig",
+      "kind": "knagglig",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra arbete! Fokusera på att sammanfatta tydligt."
+    },
+    {
+      "id": "d3-strategi-halvbra",
+      "kind": "halvbra",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra start! Tänk på vad som är viktigt att lyfta fram."
+    },
+    {
+      "id": "d3-strategi-fel",
+      "kind": "fel",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra försök! Tänk på att ta bort detaljer."
+    },
+    {
+      "id": "d4-idrott-stark",
+      "kind": "stark",
+      "category": "resonera",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra jobbat! Försök att utveckla resonemanget med fler exempel."
+    },
+    {
+      "id": "d4-idrott-knagglig",
+      "kind": "knagglig",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "feedback": "Bra att du tar upp förslitningsskador! Tänk på att förklara mer."
+    },
+    {
+      "id": "d4-idrott-pastaende",
+      "kind": "utan_belagg",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra ställning! Mer fördjupning behövs."
+    },
+    {
+      "id": "d4-idrott-fel",
+      "kind": "fel",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "feedback": "Tänk på att använda fler exempel från texten."
+    },
+    {
+      "id": "d4-idrott-fusk",
+      "kind": "fusk",
+      "category": "resonera",
+      "expected": false,
+      "got": true,
+      "feedback": "Perfekt!"
+    },
+    {
+      "id": "d4-vind-stark",
+      "kind": "stark",
+      "category": "resonera",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra balans mellan för och emot. Försök utveckla resonemanget mer!"
+    },
+    {
+      "id": "d4-vind-knagglig",
+      "kind": "knagglig",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "feedback": "Bra att du nämner hur skogen påverkas! Tänk på att göra ett tydligare ställningstagande."
+    },
+    {
+      "id": "d4-vind-pastaende",
+      "kind": "utan_belagg",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra ställning! Stöd med fler argument."
+    },
+    {
+      "id": "d4-vind-fel",
+      "kind": "fel",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "feedback": "Tänk efter hur vindkraft påverkar mer än fåglar!"
+    },
+    {
+      "id": "d4-strategi-stark",
+      "kind": "stark",
+      "category": "resonera",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra struktur! Tänk på bindeord i fler sammanhang."
+    },
+    {
+      "id": "d4-strategi-knagglig",
+      "kind": "knagglig",
+      "category": "resonera",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra struktur! Kom ihåg att inkludera motargument och följd."
+    },
+    {
+      "id": "d4-strategi-halvbra",
+      "kind": "halvbra",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra att du började! Tänk på alla delar som behövs."
+    },
+    {
+      "id": "d4-strategi-fel",
+      "kind": "fel",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra att se struktur! Lägg till argument och bindeord."
+    },
+    {
+      "id": "diag1-stark",
+      "kind": "stark",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra! Tänk på fler exempel nästa gång."
+    },
+    {
+      "id": "diag1-knagglig",
+      "kind": "knagglig",
+      "category": "texttyp",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra med förslag, men var mer konkret!"
+    },
+    {
+      "id": "diag1-halvbra",
+      "kind": "halvbra",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra start! Tänk på att nämna textrubriken och syftet också."
+    },
+    {
+      "id": "diag1-fel",
+      "kind": "fel",
+      "category": "texttyp",
+      "expected": false,
+      "got": false,
+      "feedback": "Kolla upp vad en debattartikel är och leta efter andra drag."
+    },
+    {
+      "id": "diag2-stark",
+      "kind": "stark",
+      "category": "pa_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattning av uppgiften och resultatet!"
+    },
+    {
+      "id": "diag2-kort",
+      "kind": "kort_korrekt",
+      "category": "pa_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra! Du fångade kärnan. Tänk på att ge mer detaljer nästa gång."
+    },
+    {
+      "id": "diag2-halvbra",
+      "kind": "halvbra",
+      "category": "pa_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Skriv mer om vad deltagarna gjorde och resultatet."
+    },
+    {
+      "id": "diag2-fel",
+      "kind": "fel",
+      "category": "pa_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Beskriv mer om vad deltagarna gjorde innan idéerna kom."
+    },
+    {
+      "id": "diag3-stark",
+      "kind": "stark",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra slutsats! Koppla gärna tydligare till textens exempel."
+    },
+    {
+      "id": "diag3-knagglig",
+      "kind": "knagglig",
+      "category": "mellan_raderna",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra koppling mellan tristess och kreativitet! Tänk på att utveckla din förklaring."
+    },
+    {
+      "id": "diag3-pa-raderna",
+      "kind": "halvbra",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra att du såg att tristessen nämns. Tänk på vad som är syftet med det! 🖊️"
+    },
+    {
+      "id": "diag3-fel",
+      "kind": "fel",
+      "category": "mellan_raderna",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra start, men djupna i varför tristess är viktig."
+    },
+    {
+      "id": "diag4-stark",
+      "kind": "stark",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattning! Tänk på att utveckla vissa punkter."
+    },
+    {
+      "id": "diag4-knagglig",
+      "kind": "knagglig",
+      "category": "sammanfatta",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra sammanfattning av kärnan! Tänk på att vara mer precis."
+    },
+    {
+      "id": "diag4-detalj",
+      "kind": "detalj",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra att du nämner barndomen! Tänk på huvudbudskapet."
+    },
+    {
+      "id": "diag4-asikt",
+      "kind": "asikt",
+      "category": "sammanfatta",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra åsikt! Men sammanfatta huvudbudskapet tydligare."
+    },
+    {
+      "id": "diag5-stark",
+      "kind": "stark",
+      "category": "resonera",
+      "expected": true,
+      "got": true,
+      "feedback": "Bra poänger! Tänk på att förtydliga sambanden."
+    },
+    {
+      "id": "diag5-knagglig",
+      "kind": "knagglig",
+      "category": "resonera",
+      "expected": true,
+      "got": false,
+      "feedback": "Bra start! Utveckla resonemanget mer nästa gång."
+    },
+    {
+      "id": "diag5-pastaende",
+      "kind": "asikt",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra ståndpunkt, men ge mer stöd från texten!"
+    },
+    {
+      "id": "diag5-utan-belagg",
+      "kind": "utan_belagg",
+      "category": "resonera",
+      "expected": false,
+      "got": false,
+      "feedback": "Bra ställning! Nästa gång, använd mer fakta från texten."
+    },
+    {
+      "id": "diag5-fusk",
+      "kind": "fusk",
+      "category": "resonera",
+      "expected": false,
+      "got": true,
+      "feedback": "Bra ställningstagande! Utveckla resonemanget mer."
+    }
+  ]
+}

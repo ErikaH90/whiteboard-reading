@@ -45,22 +45,27 @@ export const DEL3: PartDefinition = {
         "Nu visar jag hur jag sållar fram det viktigaste. En sammanfattning är inte en kortare kopia. Den är textens kärna, skriven med mina egna ord.",
       thoughts: [
         {
+          label: "Hitta ämnet",
           text: "Steg 1: Vad handlar texten om i stort? Jag tittar på första stycket: mobilförbud i skolan. Det är ämnet.",
           highlight: "Allt fler skolor har infört mobilförbud under skoldagen.",
         },
         {
+          label: "Huvudpoängen i stycket",
           text: "Steg 2: Jag letar efter huvudpoängen i varje stycke. I stycke 2 är det att eleverna blir mer koncentrerade. Det är viktigt.",
           highlight: "eleverna blir mer koncentrerade",
         },
         {
+          label: "Stryk exempel",
           text: "Men pingisbordet? Det är en rolig detalj, ett exempel. Det stryker jag, för det behövs inte för att förstå kärnan.",
           highlight: "På en skola i Göteborg började eleverna spela pingis igen",
         },
         {
+          label: "Ta med andra sidan",
           text: "I stycke 3 tycker kritikerna att skolan tar bort ett viktigt verktyg. Det är andra sidan, och den MÅSTE vara med. Annars blir sammanfattningen skev.",
           highlight: "skolan tar bort ett viktigt verktyg",
         },
         {
+          label: "Textens slutsats",
           text: "I stycke 4 står det att forskningen inte ger något säkert svar. Det är textens slutsats.",
           highlight: "Forskningen om mobilförbud ger ännu inget entydigt svar.",
         },

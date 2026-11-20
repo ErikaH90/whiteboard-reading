@@ -38,22 +38,27 @@ export const DEL1: PartDefinition = {
         "Nu tänker jag högt och visar hur jag tar reda på vilken sorts text det här är. Följ med i texten till höger – jag markerar det jag lägger märke till.",
       thoughts: [
         {
+          label: "Kolla avsändaren",
           text: "Först kollar jag var texten kommer ifrån. Det står 'Insändare', och elevrådet har skrivit under. Då vet jag redan att någon säger vad de tycker. Det är ingen neutral nyhet.",
           highlight: "/ Elevrådet på Centrumskolan",
         },
         {
+          label: "Retorisk fråga",
           text: "Texten börjar med en fråga som inte väntar på något svar, en retorisk fråga. Den finns där för att väcka känslor hos mig som läser.",
           highlight: "Hur länge ska kommunen ignorera ungdomars behov av mötesplatser?",
         },
         {
+          label: "Värdeladdat ord",
           text: "Ordet 'svek' är värdeladdat. En nyhetstext hade skrivit 'kommunen har beslutat att stänga', inte kallat det ett svek.",
           highlight: "svek",
         },
         {
+          label: "Argument",
           text: "Här kommer ett argument: gården är gratis, och utan den blir unga ensamma. Ett argument är ett skäl som ska stödja åsikten.",
           highlight: "den enda platsen i stan där vi kan träffas utan att det kostar pengar",
         },
         {
+          label: "Tesen och uppmaningen",
           text: "Till sist kommer 'Vi kräver...'. Det är tesen, alltså huvudåsikten, och den slutar med en uppmaning.",
           highlight: "Vi kräver att beslutet rivs upp omgående",
         },
