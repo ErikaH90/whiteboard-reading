@@ -604,6 +604,14 @@ export default function CompleteWhiteboardSystem() {
   // Under modelleringen berättar Edda själv; tavlan visar bara det hon just har sagt.
   const showHistory = task.kind !== "think_aloud";
   const eddaSpeaking = eddaTalking && isPlayingAudio;
+  const footerTip =
+    step.phase === "modellering"
+      ? "Gula markeringar visar vad Edda lägger märke till när hon tänker högt."
+      : step.phase === "traning"
+        ? "Behöver du hjälp? Be om en ledtråd på tavlan, så markerar Edda var du ska titta."
+        : supportFree
+          ? "Utan stöd: ingen uppläsning, inga markeringar och inga ledtrådar."
+          : null;
 
   const showHintButton =
     boardStage === "active_task" &&
@@ -1083,15 +1091,7 @@ export default function CompleteWhiteboardSystem() {
             )}
           </div>
 
-          <p className="pt-4 text-xs text-zinc-400">
-            {step.phase === "modellering"
-              ? "Gula markeringar visar vad Edda lägger märke till när hon tänker högt."
-              : step.phase === "traning"
-                ? "Behöver du hjälp? Be om en ledtråd på tavlan, så markerar Edda var du ska titta."
-                : supportFree
-                  ? "Utan stöd: ingen uppläsning, inga markeringar och inga ledtrådar."
-                  : "Edda anpassar texterna efter dina intressen och hur det går för dig."}
-          </p>
+          {footerTip && <p className="pt-4 text-xs text-zinc-400">{footerTip}</p>}
         </section>
       </div>
     </main>
