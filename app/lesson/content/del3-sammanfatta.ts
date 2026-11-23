@@ -4,7 +4,7 @@ const summaryTemplateHint: Hint = {
   text: "Använd mallen: 'Texten handlar om ... Vissa menar att ... medan andra ... Just nu ...' Stryk exempel och detaljer.",
 };
 
-function summaryTask(rubric: string, withSupport: boolean): FreeTask {
+function summaryTask(rubric: string, withSupport: boolean, remodel?: string): FreeTask {
   return {
     kind: "free",
     category: "sammanfatta",
@@ -14,6 +14,7 @@ function summaryTask(rubric: string, withSupport: boolean): FreeTask {
     placeholder: withSupport ? "Texten handlar om ... Vissa menar att ... medan ..." : undefined,
     rubric,
     hint: withSupport ? summaryTemplateHint : undefined,
+    remodel: withSupport ? remodel : undefined,
     fallbackFeedback:
       "Kontrollera att du har med ämnet och huvudpoängerna, och att du har strukit detaljer och egna åsikter.",
   };
@@ -23,6 +24,8 @@ export const DEL3: PartDefinition = {
   part: 3,
   title: "Sammanfatta det viktigaste",
   goal: "Skilja viktig information från detaljer och sammanfatta textens kärna med egna ord.",
+  bridge:
+    "Nu kan du hitta både det som står på raderna och det som står mellan dem. Det använder du här, när du väljer ut det viktigaste och sammanfattar.",
 
   // --------------------------------------------------------------------------
   // MODELLERING
@@ -157,6 +160,7 @@ export const DEL3: PartDefinition = {
         summaryTask(
           "Sammanfattningen tar med: ämnet (barn under tolv får ofta inte tävla om placeringar), skälet för (glädje/utveckling, många slutar annars), skälet emot (barn behöver lära sig vinna och förlora) och att frågan fortfarande diskuteras. Detaljer som simklubben i Västerås ska inte vara med. Inga egna åsikter, egna ord.",
           true,
+          "Jag tar en sak ur varje stycke. Ämnet: barn under tolv får ofta inte tävla om placeringar. Skälet för: de ska ha roligt och inte sluta. Skälet emot: de behöver lära sig vinna och förlora. Läget nu: frågan diskuteras fortfarande. Simklubben är ett exempel, så den stryker jag.",
         ),
       ],
       recallText: {
@@ -230,6 +234,7 @@ export const DEL3: PartDefinition = {
         summaryTask(
           "Sammanfattningen tar med: ämnet (loot boxes = köpta lådor med slumpmässigt innehåll), kritiken (liknar hasardspel, risk för unga, vissa länder har förbjudit/begränsat dem), spelföretagens svar (frivilligt, finansierar utveckling) och läget i Sverige (diskussion om regler/åldersgräns). Guldspelaren ska inte vara med. Egna ord, inga egna åsikter.",
           true,
+          "Jag tar en sak ur varje stycke. Ämnet: loot boxes, lådor man köper utan att veta vad man får. Kritikerna: de liknar hasardspel. Spelföretagen: de är frivilliga och betalar för utvecklingen. Läget nu: Sverige diskuterar nya regler. Guldspelaren är ett exempel, så den stryker jag.",
         ),
       ],
       recallText: {
@@ -311,6 +316,7 @@ export const DEL3: PartDefinition = {
         summaryTask(
           "Sammanfattningen tar med: ämnet (stadsträdens nytta), nyttorna (skugga/svalka, tar upp regnvatten, människor mår bättre), problemen (lite plats, vägsalt, avgaser) och åtgärden (kommuner planerar fler träd och bättre växtplatser). Linden ska inte vara med. Egna ord, inga egna åsikter.",
           true,
+          "Jag tar en sak ur varje stycke. Ämnet: träd gör nytta i städer. Nyttan: skugga, de tar upp regnvatten och människor mår bättre. Problemet: träden har det tufft. Läget nu: kommuner planerar fler träd. Linden är ett exempel, så den stryker jag.",
         ),
       ],
       recallText: {

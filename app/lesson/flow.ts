@@ -31,9 +31,11 @@ export const CATEGORY_LABELS: Record<QuestionCategory, string> = {
 
 export const PHASE_LABELS: Record<Phase, string> = {
   intro: "Start",
+  repetition: "Repetition",
   modellering: "Modellering",
   traning: "Träna själv",
   aterkallning: "Återkalla utan stöd",
+  karta: "Min läskarta",
   diktamen: "Högläsning",
   diagnos: "Slutdiagnos",
   resultat: "Resultat",
@@ -41,7 +43,7 @@ export const PHASE_LABELS: Record<Phase, string> = {
 
 /** Faser där eleven arbetar helt utan stöd: ingen ledtråd, markering, ordlista, uppläsning eller meningsstartare. */
 export function isSupportFree(phase: Phase): boolean {
-  return phase === "aterkallning" || phase === "diagnos";
+  return phase === "aterkallning" || phase === "repetition" || phase === "diagnos";
 }
 
 /** Faser vars resultat påverkar textnivån. */
@@ -95,6 +97,9 @@ export function adapt(state: AdaptState, outcome: Outcome): AdaptState {
 //         → slutdiagnos → resultat
 // ----------------------------------------------------------------------------
 
+/** Så många delar bakåt hämtas repetitionsfrågan. */
+export const REPETITION_GAP = 2;
+
 export function buildSteps(interest: Interest): LessonStep[] {
   const steps: LessonStep[] = [
     {
@@ -121,6 +126,22 @@ export function buildSteps(interest: Interest): LessonStep[] {
     const practiceKey = `del${p}_${interest}_trana`;
     const recallKey = `del${p}_${interest}_aterkalla`;
 
+    // Utspridd repetition: börja med en fråga ur minnet från en tidigare del.
+    // Två delar bakåt, så att det har hunnit gå tid sedan eleven svarade sist.
+    const earlier = PARTS.find((x) => x.part === p - REPETITION_GAP);
+    if (earlier) {
+      steps.push({
+        id: `del${p}_repetition`,
+        part: p,
+        partTitle,
+        phase: "repetition",
+        text: null,
+        textKey: null,
+        leveled: false,
+        task: earlier.strategyRecall,
+      });
+    }
+
     steps.push(
       {
         id: `${modelKey}_tanka_hogt`,
@@ -130,7 +151,11 @@ export function buildSteps(interest: Interest): LessonStep[] {
         text: part.model.text,
         textKey: modelKey,
         leveled: false,
-        task: part.model.thinkAloud,
+        // Edda börjar med syftet och kopplingen till det eleven redan kan
+        task: {
+          ...part.model.thinkAloud,
+          intro: `${part.bridge}\n\n${part.model.thinkAloud.intro}`,
+        },
       },
       {
         id: `${modelKey}_exempel`,
@@ -179,6 +204,18 @@ export function buildSteps(interest: Interest): LessonStep[] {
       textKey: null,
       leveled: false,
       task: part.strategyRecall,
+    });
+
+    // Varje del avslutas med läskartan: så här långt har du kommit
+    steps.push({
+      id: `del${p}_karta`,
+      part: p,
+      partTitle,
+      phase: "karta",
+      text: null,
+      textKey: null,
+      leveled: false,
+      task: { kind: "map" },
     });
   }
 

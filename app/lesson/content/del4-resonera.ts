@@ -5,6 +5,7 @@ function reasoningTask(
   rubricEvidence: string,
   withSupport: boolean,
   hint?: FreeTask["hint"],
+  remodel?: string,
 ): FreeTask {
   return {
     kind: "free",
@@ -17,6 +18,7 @@ function reasoningTask(
       : undefined,
     rubric: `Eleven tar ställning; använder belägg från texten (${rubricEvidence}); förklarar orsak och följd i minst två led med bindeord; väger gärna in motargument/andra sidan.`,
     hint: withSupport ? hint : undefined,
+    remodel: withSupport ? remodel : undefined,
     fallbackFeedback:
       "Kontrollera att du har: påstående → belägg ur texten → förklaring (eftersom) → följd (vilket leder till) → andra sidan (samtidigt).",
   };
@@ -26,6 +28,8 @@ export const DEL4: PartDefinition = {
   part: 4,
   title: "Resonera med stöd i texten",
   goal: "Föra utvecklade resonemang med stöd i texten: påstående, belägg, förklaring, följd och andra sidan.",
+  bridge:
+    "Du kan redan hitta det viktigaste i en text. Nu använder du det som stöd när du resonerar, för det är så du visar att du har förstått.",
 
   // --------------------------------------------------------------------------
   // MODELLERING
@@ -149,6 +153,7 @@ export const DEL4: PartDefinition = {
             text: "Börja med ditt påstående. Hämta sedan ett belägg, till exempel vad studier av elitidrottare visar, och förklara vad det leder till.",
             highlight: "många av dem höll på med flera olika idrotter som barn",
           },
+          "Jag väljer en sida, du får välja din egen. Påstående: barn bör prova flera idrotter. Belägg: många elitidrottare höll på med flera idrotter som barn. Förklaring: eftersom de fick en bred rörelseförmåga kunde de välja senare, vilket leder till att färre tröttnar. Andra sidan: i gymnastik når man toppen tidigt.",
         ),
       ],
       recallText: {
@@ -228,6 +233,7 @@ export const DEL4: PartDefinition = {
             text: "Forskarnas syn i sista stycket kan bli ett starkt belägg, oavsett vad du tycker. Förklara vad det leder till.",
             highlight: "det viktiga inte är antalet timmar",
           },
+          "Jag väljer en sida, du får välja din egen. Påstående: en lag behövs inte. Belägg: forskarna menar att det viktiga inte är antalet timmar. Förklaring: eftersom det avgörande är om spelandet tränger undan annat, träffar en timgräns fel, vilket leder till att den inte hjälper dem som behöver det. Andra sidan: det är svårt att sluta själv.",
         ),
       ],
       recallText: {
@@ -307,6 +313,7 @@ export const DEL4: PartDefinition = {
             text: "Texten ger argument åt båda hållen: utsläpp och hälsa, men också öppna landskap. Välj sida, hämta ett belägg och förklara vad det leder till.",
             highlight: "mindre men bättre kött",
           },
+          "Jag väljer en sida, du får välja din egen. Påstående: vi bör äta mindre kött, men inte sluta helt. Belägg: nötkött ger stora utsläpp. Förklaring: eftersom kor bildar metan leder mindre kött till lägre utsläpp. Andra sidan: betande djur håller landskapet öppet, så mellanvägen är mindre men bättre kött.",
         ),
       ],
       recallText: {

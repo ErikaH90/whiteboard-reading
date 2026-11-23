@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   INTERESTS,
+  PARTS,
   START_ADAPT,
   adapt,
   affectsLevel,
@@ -105,7 +106,8 @@ describe.each(INTERESTS.map((i) => i.id))("buildSteps(%s)", (interest) => {
   });
 
   it.each([1, 2, 3, 4])("del %i följer modellering → träna → återkalla", (part) => {
-    const partSteps = steps.filter((s) => s.part === part);
+    const allPartSteps = steps.filter((s) => s.part === part);
+    const partSteps = allPartSteps.filter((s) => s.phase !== "karta" && s.phase !== "repetition");
     const order: Phase[] = ["modellering", "traning", "aterkallning"];
 
     // Faserna kommer i rätt ordning och ingen saknas
@@ -132,6 +134,30 @@ describe.each(INTERESTS.map((i) => i.id))("buildSteps(%s)", (interest) => {
     expect(last.phase).toBe("aterkallning");
     expect(last.text).toBeNull();
     expect(last.task.kind).toBe("free");
+
+    // Sist visas läskartan, en gång per del
+    expect(allPartSteps.filter((s) => s.phase === "karta")).toHaveLength(1);
+    expect(allPartSteps.at(-1)!.task.kind).toBe("map");
+  });
+
+  it("börjar del 3 och 4 med en repetitionsfråga från två delar tidigare", () => {
+    const first = (part: number) => steps.find((s) => s.part === part)!;
+    expect(first(1).phase).toBe("modellering");
+    expect(first(2).phase).toBe("modellering");
+    for (const part of [3, 4]) {
+      const rep = first(part);
+      expect(rep.phase).toBe("repetition");
+      expect(rep.text).toBeNull();
+      expect(rep.task).toBe(PARTS.find((p) => p.part === part - 2)!.strategyRecall);
+    }
+  });
+
+  it("låter Edda börja varje modellering med syftet", () => {
+    for (const part of PARTS) {
+      const model = steps.find((s) => s.part === part.part && s.task.kind === "think_aloud")!;
+      if (model.task.kind !== "think_aloud") throw new Error("fel uppgiftstyp");
+      expect(model.task.intro.startsWith(part.bridge)).toBe(true);
+    }
   });
 
   it("har högläsning före en slutdiagnos med fem frågor på samma text", () => {

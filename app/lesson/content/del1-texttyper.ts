@@ -16,6 +16,8 @@ export const DEL1: PartDefinition = {
   part: 1,
   title: "Texttypers särdrag",
   goal: "Känna igen vad en sakprosatext vill (informera eller påverka) och visa det med drag ur texten.",
+  bridge:
+    "I den här delen lär du dig se vad en text vill: informera eller påverka. Då vet du hur du ska läsa den.",
 
   // --------------------------------------------------------------------------
   // MODELLERING
@@ -132,6 +134,8 @@ export const DEL1: PartDefinition = {
           placeholder: "Ett drag är ... till exempel när det står '...'. Ett annat drag är ...",
           rubric:
             "Eleven namnger två relevanta särdrag för debattartikel (tes/krav, argument, värdeladdade ord som 'orimligt', uppmaning) och kopplar dem till konkreta ställen i texten.",
+          remodel:
+            "Jag letar efter drag som visar att någon tycker något. 'Det är orimligt' är ett värdeladdat ord, och 'vi kräver' är ett krav. Det är två drag, och båda hör till en debattartikel.",
           hint: {
             text: "Tänk på modellen: tes, argument och värdeladdade ord. Vilket ord visar vad skribenten tycker om priset?",
             highlight: "Det är orimligt.",
@@ -201,6 +205,8 @@ export const DEL1: PartDefinition = {
           placeholder: "Ett drag är ... till exempel ... Ett annat drag är ...",
           rubric:
             "Eleven namnger två relevanta särdrag för nyhetsartikel (neutral ton, fakta om vad/var/när direkt i början, citat från källa, skribenten tar inte ställning) och kopplar dem till texten.",
+          remodel:
+            "Jag tittar på första meningen. Där får jag veta vad, var och när direkt, utan att skribenten tycker något. Sedan citeras rektorn, som är en källa. Neutral ton och citat från en källa är två drag i en nyhetsartikel.",
           hint: {
             text: "Titta på första meningen: vad, var och när får du veta direkt? Och vem är det som citeras?",
             highlight:
@@ -273,6 +279,8 @@ export const DEL1: PartDefinition = {
           placeholder: "Ett drag är ... till exempel ... Ett annat drag är ...",
           rubric:
             "Eleven namnger två särdrag för informerande/förklarande text (neutral ton, fakta och siffror, förklarar samband med t.ex. 'vilket gör att', fackord, inga åsikter) och kopplar dem till texten.",
+          remodel:
+            "Jag letar efter fakta och förklaringar. 'Ungefär en tredjedel' är en siffra, och 'vilket gör att' förklarar hur något hänger ihop. Jag hittar ingen åsikt. Det är två drag i en faktatext.",
           hint: {
             text: "Leta efter siffror och ord som förklarar hur något hänger ihop, till exempel 'vilket gör att'.",
             highlight: "Ungefär en tredjedel",

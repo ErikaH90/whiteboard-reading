@@ -120,3 +120,24 @@ describe("modellering: stödord på tavlan", () => {
     },
   );
 });
+
+describe("träning: hjälpen kommer utan att eleven ber om den", () => {
+  const practice = allSteps.filter((s) => s.phase === "traning");
+
+  it.each(practice.map((s) => [label(s), s] as const))(
+    "%s har ledtråd, och fritextfrågor har en omvisning",
+    (_, s) => {
+      const t = s.task;
+      if (t.kind !== "choice" && t.kind !== "free") throw new Error("fel uppgiftstyp");
+      expect(t.hint?.text.trim().length).toBeGreaterThan(0);
+      if (t.kind === "free") expect(t.remodel?.trim().length).toBeGreaterThan(0);
+    },
+  );
+
+  it("ger aldrig omvisning i faser utan stöd", () => {
+    for (const s of allSteps) {
+      if (s.phase === "traning" || s.task.kind !== "free") continue;
+      expect(s.task.remodel, s.id).toBeUndefined();
+    }
+  });
+});

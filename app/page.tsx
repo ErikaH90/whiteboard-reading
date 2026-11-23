@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { Brain, Check, Lightbulb, Mic, MicOff, Star, Volume2, VolumeX } from "lucide-react";
+import { Brain, Check, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import {
   CATEGORY_LABELS,
   INTERESTS,
@@ -17,6 +17,17 @@ import {
   type AdaptState,
   type Outcome,
 } from "./lesson/flow";
+import {
+  CHOICE_LEVEL,
+  EMPTY_MAP,
+  countsOnMap,
+  defaultTip,
+  earnedLevel,
+  levelOf,
+  record,
+  type Quality,
+} from "./lesson/progress";
+import { LevelWedge, ReadingMapChart, ReadingMapLegend } from "./lesson/ui/ReadingMapChart";
 import type {
   ChoiceTask,
   Interest,
@@ -37,12 +48,18 @@ type BoardEntry = {
   text: string;
   tone?: "feedback" | "hint" | "note";
   ok?: boolean;
+  /** Edda säger detta högt. Texten visas först när hon har pratat klart. */
+  spoken?: boolean;
+  /** Nivån AI-Edda satte på svaret. Visas som en tårtbit i pratbubblan. */
+  quality?: Quality;
   strength?: string;
   nextStep?: string;
 };
 
 type Evaluation = {
   passed: boolean;
+  /** Saknas om AI-bedömningen inte gick att genomföra. */
+  quality?: Quality | null;
   strength: string;
   nextStep: string;
   boardFeedback: string;
@@ -111,7 +128,7 @@ function renderHighlighted(text: string, earlier: string[], current: string[]) {
 function phaseIntro(step: LessonStep): string | null {
   switch (step.phase) {
     case "traning":
-      return "Nu är det din tur på en ny text! Behöver du hjälp kan du be om en ledtråd.";
+      return "Nu är det din tur på en ny text. Försök själv först. Kör du fast hjälper jag dig.";
     case "aterkallning":
       return step.text
         ? "Ny text, och nu svarar du helt själv. Inga ledtrådar och ingen uppläsning. Visa vad du kan!"
@@ -135,6 +152,8 @@ export default function CompleteWhiteboardSystem() {
   const step = steps[stepIndex];
   const task = step.task;
   const supportFree = isSupportFree(step.phase);
+  // I träningen kommer hjälpen av sig själv efter ett fel
+  const helpAllowed = step.phase === "traning";
 
   // Adaptiv textnivå
   const [adaptState, setAdaptState] = useState<AdaptState>(START_ADAPT);
@@ -155,11 +174,11 @@ export default function CompleteWhiteboardSystem() {
   // Per-steg-tillstånd
   const [selectedOption, setSelectedOption] = useState<OptionId | null>(null);
   const [freeText, setFreeText] = useState("");
-  const [lastAnswer, setLastAnswer] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hintShown, setHintShown] = useState(false);
   const [attempts, setAttempts] = useState(0);
-  const [canRetry, setCanRetry] = useState(false);
+  // Alternativ som eleven redan har provat i träningen
+  const [triedOptions, setTriedOptions] = useState<OptionId[]>([]);
   // -1 = Eddas inledning, 0..n-1 = en tanke i taget, n = slutsatsen
   const [thoughtIndex, setThoughtIndex] = useState(-1);
   // true medan Edda pratar: då är tavlan nästan tom, texten visas först efteråt
@@ -173,6 +192,20 @@ export default function CompleteWhiteboardSystem() {
   const [diagResults, setDiagResults] = useState<Record<string, Evaluation | "pending" | "error">>(
     {},
   );
+
+  // Läskartan: högsta visade nivå per förmåga, och Eddas senaste nästa steg
+  const [readingMap, setReadingMap] = useState(EMPTY_MAP);
+  const [mapTips, setMapTips] = useState<Partial<Record<QuestionCategory, string>>>({});
+  const [selectedCategory, setSelectedCategory] = useState<QuestionCategory | null>(null);
+
+  /** För in ett AI-bedömt svar på läskartan. */
+  function recordOnMap(category: QuestionCategory, ev: Evaluation | null, supported: boolean) {
+    if (!ev?.quality) return;
+    const level = earnedLevel(ev.quality, supported);
+    setReadingMap((m) => record(m, category, level));
+    if (ev.nextStep) setMapTips((t) => ({ ...t, [category]: ev.nextStep }));
+  }
+
 
   // ==========================================================================
   // Ljud: ElevenLabs med webbläsarens röst som reserv
@@ -251,14 +284,31 @@ export default function CompleteWhiteboardSystem() {
     }
   }
 
-  function speakThought(t: ThinkAloudTask, index: number) {
-    const text =
-      index < 0 ? t.intro : index < t.thoughts.length ? t.thoughts[index].text : t.summary;
+  /** Edda säger något högt. Tavlan visar texten först när hon är klar. */
+  function eddaSpeak(text: string) {
     setEddaTalking(true);
     playText(text, () => setEddaTalking(false));
   }
 
+  function speakThought(t: ThinkAloudTask, index: number) {
+    eddaSpeak(index < 0 ? t.intro : index < t.thoughts.length ? t.thoughts[index].text : t.summary);
+  }
+
+  function toggleSound() {
+    if (audioUnlocked) {
+      stopAudio();
+      setIsPlayingAudio(false);
+      setEddaTalking(false);
+    }
+    setAudioUnlocked(!audioUnlocked);
+  }
+
   useEffect(() => () => stopAudio(), []);
+
+  // Tidtagningen för ett svar börjar när uppgiften visas på tavlan
+  useEffect(() => {
+    if (boardStage === "active_task") startTimeRef.current = performance.now();
+  }, [boardStage, stepIndex]);
 
   // Håll den aktuella gulmarkeringen synlig i lästexten
   useEffect(() => {
@@ -279,7 +329,6 @@ export default function CompleteWhiteboardSystem() {
   /** Visar uppgiften på tavlan när texten är läst/uppläst. */
   function activateBoard(s: LessonStep, speak: boolean) {
     setBoardStage("active_task");
-    startTimeRef.current = performance.now();
     if (s.task.kind === "think_aloud" && speak) speakThought(s.task, -1);
   }
 
@@ -292,11 +341,11 @@ export default function CompleteWhiteboardSystem() {
     setIsPlayingAudio(false);
     setSelectedOption(null);
     setFreeText("");
-    setLastAnswer("");
     setHintShown(false);
     setAttempts(0);
-    setCanRetry(false);
+    setTriedOptions([]);
     setThoughtIndex(-1);
+    setSelectedCategory(null);
     setIsRecording(false);
 
     const entries: BoardEntry[] = [];
@@ -321,8 +370,8 @@ export default function CompleteWhiteboardSystem() {
             tone: "note",
             text:
               level > last
-                ? `↑ Du klarar dig bra utan stöd, så jag har gjort texten längre och lite svårare (nivå ${level} av 3).`
-                : `↓ Jag har gjort texten lite kortare den här gången (nivå ${level} av 3). Vi bygger upp det igen!`,
+                ? `Du klarar dig bra utan stöd, så den här texten är längre och lite svårare (nivå ${level} av 3).`
+                : `Förra texten var svår. Den här är lite kortare (nivå ${level} av 3), så bygger vi upp det igen.`,
           });
         }
         lastLeveledLevelRef.current = level;
@@ -331,7 +380,7 @@ export default function CompleteWhiteboardSystem() {
 
     if (next.task.kind === "think_aloud") {
       entries.push({ sender: "teacher", text: next.task.intro });
-    } else if (next.task.kind !== "result") {
+    } else if (next.task.kind !== "result" && next.task.kind !== "map") {
       entries.push({ sender: "teacher", text: next.task.prompt });
     }
 
@@ -341,8 +390,12 @@ export default function CompleteWhiteboardSystem() {
     const isNewText = !!next.textKey && next.textKey !== prev?.textKey;
     if (isNewText && next.text) {
       setBoardStage("listening_blank");
+      // Uppläsningen tonas ut: på nivå 2 och 3 läser eleven själv
       const autoRead =
-        audioUnlocked && !isSupportFree(next.phase) && next.phase !== "diktamen";
+        audioUnlocked &&
+        !isSupportFree(next.phase) &&
+        next.phase !== "diktamen" &&
+        (!next.leveled || level === 1);
       if (autoRead) playText(plainText(next.text, level), () => activateBoard(next, true));
     } else {
       activateBoard(next, false);
@@ -426,35 +479,52 @@ export default function CompleteWhiteboardSystem() {
     setBoardStage("showing_feedback");
   }
 
-  function handleHint() {
-    if ((task.kind !== "choice" && task.kind !== "free") || !task.hint || hintShown) return;
-    setHintShown(true);
-    setBoardHistory((prev) => [
-      ...prev,
-      { sender: "teacher", tone: "hint", text: `💡 ${task.hint!.text}` },
-    ]);
+  /**
+   * Sluten loop i träningen: eleven försöker själv först. Efter ett fel
+   * kommer ledtråden av sig själv. Efter två fel visar Edda just den här
+   * luckan igen, på elevens egen text.
+   */
+
+  function remodelEntry(text: string): BoardEntry {
+    const full = `Den här var svår, och det är okej. Jag visar hur jag tänker.\n${text}`;
+    if (audioUnlocked) eddaSpeak(full);
+    return { sender: "teacher", tone: "feedback", ok: false, spoken: true, text: full };
   }
 
   function handleOptionSelect(opt: ChoiceTask["options"][number]) {
     if (task.kind !== "choice") return;
     if (selectedOption !== null || isSubmitting || boardStage !== "active_task") return;
+    if (triedOptions.includes(opt.id)) return;
+    const answer: BoardEntry = { sender: "student", text: `${opt.id}: ${opt.text}` };
+
+    // Första felet i träningen: ledtråd och markering, sedan ett försök till
+    if (!opt.isCorrect && helpAllowed && attempts === 0 && task.hint) {
+      setAttempts(1);
+      setHintShown(true);
+      setTriedOptions([opt.id]);
+      setBoardHistory((prev) => [
+        ...prev,
+        answer,
+        { sender: "teacher", tone: "hint", text: `Inte riktigt än. ${task.hint!.text}` },
+      ]);
+      return;
+    }
 
     setSelectedOption(opt.id);
     registerOutcome(
       task.category,
-      opt.isCorrect ? (hintShown ? "correct_with_support" : "correct") : "wrong",
+      opt.isCorrect ? (attempts > 0 ? "correct_with_support" : "correct") : "wrong",
     );
+    if (opt.isCorrect && countsOnMap(step.phase)) {
+      setReadingMap((m) => record(m, task.category, CHOICE_LEVEL));
+    }
 
-    setBoardHistory((prev) => [
-      ...prev,
-      { sender: "student", text: `${opt.id}: ${opt.text}` },
-      {
-        sender: "teacher",
-        tone: "feedback",
-        ok: opt.isCorrect,
-        text: opt.isCorrect ? task.correctFeedback : task.incorrectFeedback,
-      },
-    ]);
+    const reply: BoardEntry = opt.isCorrect
+      ? { sender: "teacher", tone: "feedback", ok: true, text: task.correctFeedback }
+      : helpAllowed
+        ? remodelEntry(task.incorrectFeedback)
+        : { sender: "teacher", tone: "feedback", ok: false, text: task.incorrectFeedback };
+    setBoardHistory((prev) => [...prev, answer, reply]);
     setBoardStage("showing_feedback");
   }
 
@@ -467,7 +537,8 @@ export default function CompleteWhiteboardSystem() {
         body: JSON.stringify({
           stepId: s.id,
           category: s.task.category,
-          phase: s.phase,
+          // Bedömningen känner bara till träning, återkallning och diagnos
+          phase: s.phase === "repetition" ? "aterkallning" : s.phase,
           level,
           question: s.task.prompt,
           studentAnswer: answer,
@@ -489,19 +560,20 @@ export default function CompleteWhiteboardSystem() {
     const val = freeText.trim();
     if (!val || isSubmitting || boardStage !== "active_task") return;
 
-    setBoardHistory((prev) => [...prev, { sender: "student", text: val }]);
-    setFreeText("");
-    setLastAnswer(val);
+    const answer: BoardEntry = { sender: "student", text: val };
 
     // Slutdiagnos: spara svaret, rätta i bakgrunden, visa allt på slutet
     if (step.phase === "diagnos") {
       const diagStep = step;
       setDiagResults((prev) => ({ ...prev, [diagStep.id]: "pending" }));
-      evaluate(diagStep, val, stepLevel).then((r) =>
-        setDiagResults((prev) => ({ ...prev, [diagStep.id]: r ?? "error" })),
-      );
+      evaluate(diagStep, val, stepLevel).then((r) => {
+        setDiagResults((prev) => ({ ...prev, [diagStep.id]: r ?? "error" }));
+        recordOnMap(task.category, r, false);
+      });
+      setFreeText("");
       setBoardHistory((prev) => [
         ...prev,
+        answer,
         {
           sender: "teacher",
           tone: "note",
@@ -516,43 +588,38 @@ export default function CompleteWhiteboardSystem() {
     const ev = await evaluate(step, val, stepLevel);
     const passed = ev?.passed ?? true;
 
-    setBoardHistory((prev) => [
-      ...prev,
-      {
-        sender: "teacher",
-        tone: "feedback",
-        ok: passed,
-        text: ev?.boardFeedback || task.fallbackFeedback,
-        strength: ev?.strength || undefined,
-        nextStep: ev?.nextStep || undefined,
-      },
-    ]);
+    const feedback: BoardEntry = {
+      sender: "teacher",
+      tone: "feedback",
+      ok: passed,
+      text: ev?.boardFeedback || task.fallbackFeedback,
+      quality: ev?.quality || undefined,
+      strength: ev?.strength || undefined,
+      nextStep: ev?.nextStep || undefined,
+    };
 
-    if (attempts === 0) {
-      registerOutcome(
-        task.category,
-        passed ? (hintShown ? "correct_with_support" : "correct") : "wrong",
-      );
-    }
-    // Liten AI-stöttning: en chans att förbättra svaret under träningen
-    setCanRetry(!passed && step.phase === "traning" && attempts === 0);
-    setAttempts((a) => a + 1);
+    // Ett svar efter ledtråd och ett nytt försök räknas som svar med stöd
+    if (countsOnMap(step.phase)) recordOnMap(task.category, ev, attempts > 0);
     setIsSubmitting(false);
-    setBoardStage("showing_feedback");
-  }
 
-  function handleRetry() {
-    setCanRetry(false);
-    setFreeText(lastAnswer);
-    setBoardHistory((prev) => [
-      ...prev,
-      {
-        sender: "teacher",
-        tone: "hint",
-        text: "Förbättra ditt svar med hjälp av nästa steg ovan. Du kan ändra direkt i din text.",
-      },
-    ]);
-    setBoardStage("active_task");
+    // Första försöket i träningen räckte inte: Eddas nästa steg och en
+    // markering i texten, och eleven förbättrar sitt svar direkt i rutan.
+    if (!passed && helpAllowed && attempts === 0) {
+      setAttempts(1);
+      setHintShown(true);
+      setBoardHistory((prev) => [...prev, feedback]);
+      return;
+    }
+
+    registerOutcome(
+      task.category,
+      passed ? (attempts > 0 ? "correct_with_support" : "correct") : "wrong",
+    );
+    setFreeText("");
+    const reply = !passed && helpAllowed && task.remodel ? remodelEntry(task.remodel) : feedback;
+    setBoardHistory((prev) => [...prev, answer, reply]);
+    setAttempts((a) => a + 1);
+    setBoardStage("showing_feedback");
   }
 
   function handleNextThought() {
@@ -598,28 +665,45 @@ export default function CompleteWhiteboardSystem() {
       if (t.highlight) (i === thoughtIndex ? currentHighlights : earlierHighlights).push(t.highlight);
     });
   }
-  if (hintShown && (task.kind === "choice" || task.kind === "free") && task.hint?.highlight) {
+  if (
+    hintShown &&
+    !supportFree &&
+    (task.kind === "choice" || task.kind === "free") &&
+    task.hint?.highlight
+  ) {
     currentHighlights.push(task.hint.highlight);
   }
   // Under modelleringen berättar Edda själv; tavlan visar bara det hon just har sagt.
   const showHistory = task.kind !== "think_aloud";
   const eddaSpeaking = eddaTalking && isPlayingAudio;
-  const footerTip =
-    step.phase === "modellering"
-      ? "Gula markeringar visar vad Edda lägger märke till när hon tänker högt."
-      : step.phase === "traning"
-        ? "Behöver du hjälp? Be om en ledtråd på tavlan, så markerar Edda var du ska titta."
-        : supportFree
-          ? "Utan stöd: ingen uppläsning, inga markeringar och inga ledtrådar."
-          : null;
 
-  const showHintButton =
-    boardStage === "active_task" &&
-    !supportFree &&
-    (task.kind === "choice" || task.kind === "free") &&
-    !!task.hint &&
-    !hintShown &&
-    selectedOption === null;
+  const mapPanel = (
+    <div className="flex flex-col items-center gap-4">
+      <ReadingMapChart
+        map={readingMap}
+        selected={selectedCategory}
+        onSelect={(c) => setSelectedCategory(c === selectedCategory ? null : c)}
+      />
+      <ReadingMapLegend />
+      <p className="font-whiteboard text-lg text-zinc-500 text-center">
+        Grön betyder redo. Klicka på en del om du vill ha tips av Edda.
+      </p>
+      {selectedCategory && (
+        <div className="w-full max-w-2xl">
+          <EddaSays badge={<LevelWedge level={readingMap[selectedCategory]} />}>
+            <p className="font-bold">{CATEGORY_LABELS[selectedCategory]}</p>
+            <p>
+              {(readingMap[selectedCategory] < 3 && mapTips[selectedCategory]) ||
+                defaultTip(readingMap[selectedCategory])}
+            </p>
+          </EddaSays>
+        </div>
+      )}
+    </div>
+  );
+  const footerTip = supportFree
+    ? "Utan stöd: ingen uppläsning, inga markeringar och inga ledtrådar."
+    : null;
 
   const paragraphs = step.text ? paragraphsFor(step.text, stepLevel) : [];
   const showGlossary =
@@ -637,7 +721,6 @@ export default function CompleteWhiteboardSystem() {
     cycleIndex >= 0
       ? `${PHASE_LABELS[step.phase]} · steg ${cycleIndex + 1} av ${CYCLE.length}`
       : PHASE_LABELS[step.phase];
-  const lastFeedbackIndex = boardHistory.map((e) => e.tone).lastIndexOf("feedback");
 
   // ==========================================================================
   // Rendering
@@ -682,12 +765,23 @@ export default function CompleteWhiteboardSystem() {
             />
           ))}
         </div>
-        <span className="shrink-0 text-base text-zinc-500 tabular-nums">
-          {step.part}/{TOTAL_PARTS}
-        </span>
+        <div className="flex shrink-0 items-center gap-5">
+          <ReadingMapChart map={readingMap} mini />
+          <button
+            onClick={toggleSound}
+            aria-pressed={audioUnlocked}
+            className="rounded-xl border border-[#C5CEF0] bg-[#EEF1FB] px-4 py-2 text-sm font-bold text-[#3B62E3] transition hover:bg-[#E0E6FA]"
+          >
+            {audioUnlocked ? "Ljud på" : "Ljud av"}
+          </button>
+        </div>
       </header>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-6 p-4 sm:p-6 lg:px-12 lg:py-7">
+      <div
+        className={`flex-1 min-h-0 grid grid-cols-1 gap-6 p-4 sm:p-6 lg:px-12 lg:py-7 ${
+          task.kind === "map" ? "" : "lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
+        }`}
+      >
         {/* ================================================================== */}
         {/* VÄNSTER: WHITEBOARDEN                                               */}
         {/* ================================================================== */}
@@ -764,20 +858,28 @@ export default function CompleteWhiteboardSystem() {
                       </p>
                     );
                   }
-                  const showRetry =
-                    idx === lastFeedbackIndex && canRetry && boardStage === "showing_feedback";
+                  // Det Edda säger högt visas först när hon har pratat klart
+                  if (item.spoken && idx === boardHistory.length - 1 && eddaSpeaking) {
+                    return (
+                      <EddaSays key={idx} label="Edda berättar">
+                        <TalkingDots />
+                      </EddaSays>
+                    );
+                  }
                   return (
                     <div key={idx} className="space-y-4">
                       <EddaSays
-                        star={
-                          item.tone === "feedback" &&
-                          item.ok === true &&
-                          (task.kind === "choice" || task.kind === "free")
+                        badge={
+                          item.quality && item.quality !== "inte_an" ? (
+                            <LevelWedge level={levelOf(item.quality)} />
+                          ) : item.tone === "feedback" && item.ok && task.kind === "choice" ? (
+                            <CorrectMark />
+                          ) : null
                         }
                       >
                         {item.text}
                       </EddaSays>
-                      {(item.strength || item.nextStep || showRetry) && (
+                      {(item.strength || item.nextStep) && (
                         <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4 space-y-3">
                           {item.strength && (
                             <div>
@@ -795,13 +897,6 @@ export default function CompleteWhiteboardSystem() {
                               <p className="font-whiteboard text-lg text-zinc-600">
                                 {item.nextStep}
                               </p>
-                            </div>
-                          )}
-                          {showRetry && (
-                            <div className="flex justify-end">
-                              <button onClick={handleRetry} className={SECONDARY}>
-                                Försök igen
-                              </button>
                             </div>
                           )}
                         </div>
@@ -884,7 +979,8 @@ export default function CompleteWhiteboardSystem() {
                         <button
                           key={opt.id}
                           onClick={() => handleOptionSelect(opt)}
-                          className={OPTION}
+                          disabled={triedOptions.includes(opt.id)}
+                          className={`${OPTION} disabled:pointer-events-none disabled:opacity-40 disabled:line-through`}
                         >
                           <span className="font-bold text-[#5B46D6]">{opt.id}</span>
                           <span>{opt.text}</span>
@@ -898,7 +994,11 @@ export default function CompleteWhiteboardSystem() {
                   <form onSubmit={handleFreeTextSubmit} className="space-y-4">
                     <label className="block space-y-2">
                       <span className="font-whiteboard text-base text-zinc-500">
-                        {supportFree ? "Ditt svar, utan ledtråd" : "Ditt svar"}
+                        {supportFree
+                          ? "Ditt svar, utan ledtråd"
+                          : attempts > 0
+                            ? "Förbättra ditt svar"
+                            : "Ditt svar"}
                       </span>
                       <textarea
                         value={freeText}
@@ -922,14 +1022,6 @@ export default function CompleteWhiteboardSystem() {
                   </form>
                 )}
 
-                {/* LITEN AI-STÖTTNING: ledtråd */}
-                {showHintButton && (
-                  <button onClick={handleHint} className={`${LINK} flex items-center gap-1.5`}>
-                    <Lightbulb size={15} />
-                    <span>Jag behöver en ledtråd</span>
-                  </button>
-                )}
-
                 {/* DIKTAMEN */}
                 {task.kind === "dictation" && boardStage === "active_task" && (
                   <div className="flex items-center gap-4">
@@ -951,11 +1043,24 @@ export default function CompleteWhiteboardSystem() {
                 )}
 
                 {/* RESULTAT: läsprofil efter slutdiagnosen */}
+                {/* LÄSKARTAN: så här långt har du kommit */}
+                {task.kind === "map" && (
+                  <>
+                    {mapPanel}
+                    <div className="flex justify-end border-t border-zinc-200 pt-5">
+                      <button onClick={handleProceedToNextStep} className={PRIMARY}>
+                        {step.part < PARTS.length ? "Nästa del" : "Gå vidare"}
+                      </button>
+                    </div>
+                  </>
+                )}
+
                 {task.kind === "result" &&
                   (diagPending ? (
                     <p className={`${BODY} animate-pulse`}>Edda rättar din slutdiagnos...</p>
                   ) : (
                     <div className="space-y-4">
+                      {mapPanel}
                       {diagSteps.map((s) => {
                         const r = diagResults[s.id];
                         const ev = r && r !== "pending" && r !== "error" ? r : null;
@@ -1003,7 +1108,7 @@ export default function CompleteWhiteboardSystem() {
                   ))}
 
                 {/* VIDARE EFTER ÅTERKOPPLING */}
-                {boardStage === "showing_feedback" && !isLastStep && (
+                {boardStage === "showing_feedback" && !isLastStep && !eddaSpeaking && (
                   <button onClick={handleProceedToNextStep} className={PRIMARY}>
                     Gå vidare
                   </button>
@@ -1078,7 +1183,7 @@ export default function CompleteWhiteboardSystem() {
                   )}
                 </div>
               </>
-            ) : step.phase === "aterkallning" ? (
+            ) : step.phase === "aterkallning" || step.phase === "repetition" ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 text-zinc-400">
                 <Brain size={36} />
                 <p className="text-base font-semibold text-zinc-600">Inget textstöd</p>
@@ -1108,8 +1213,6 @@ const TOTAL_PARTS = PARTS.length + 1;
 const BODY = "font-whiteboard text-2xl sm:text-[1.7rem] leading-snug text-zinc-900";
 const PRIMARY =
   "inline-flex items-center justify-center rounded-xl bg-[#3B62E3] px-6 py-3 text-base font-bold text-white transition hover:bg-[#2F52C9] disabled:opacity-40";
-const SECONDARY =
-  "inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-6 py-2.5 text-base font-bold text-zinc-800 transition hover:bg-zinc-50";
 const LINK = "font-whiteboard text-lg text-[#3F7FA6] transition hover:text-[#2C5F80]";
 const OPTION =
   "font-whiteboard flex w-full items-start gap-3 rounded-2xl border-2 border-zinc-200 px-5 py-3 text-left text-xl sm:text-2xl text-zinc-900 transition hover:border-[#3B62E3] hover:bg-[#F5F7FE]";
@@ -1118,12 +1221,16 @@ function phaseHeading(step: LessonStep): string {
   switch (step.phase) {
     case "intro":
       return "Välkommen!";
+    case "repetition":
+      return "Börja med att återkalla";
     case "modellering":
       return "Edda visar hur hon tänker";
     case "traning":
       return "Nu är det din tur";
     case "aterkallning":
       return step.text ? "Återkalla utan stöd" : "Återkalla ur minnet";
+    case "karta":
+      return "Så här långt har du kommit";
     case "diktamen":
       return "Läs högt";
     case "diagnos":
@@ -1152,12 +1259,12 @@ function TalkingDots() {
 function EddaSays({
   children,
   label = "Edda",
-  star = false,
+  badge = null,
 }: {
   children: React.ReactNode;
   label?: string;
-  /** Stjärna för ett bra svar. */
-  star?: boolean;
+  /** Tårtbit eller bock som visas till vänster i bubblan efter ett svar. */
+  badge?: React.ReactNode;
 }) {
   return (
     <div className="flex items-end gap-3 sm:gap-4">
@@ -1172,21 +1279,27 @@ function EddaSays({
         <p className="mb-1.5 pl-5 text-base font-bold text-[#5B46D6]">{label}</p>
         <div
           className={`flex items-center gap-4 rounded-[1.6rem] border-2 bg-white px-5 py-4 text-lg leading-snug text-zinc-800 ${
-            star ? "border-[#8B7ADB]" : "border-[#C9C2EE]"
+            badge ? "border-[#8B7ADB]" : "border-[#C9C2EE]"
           }`}
         >
-          {star && (
-            <Star
-              role="img"
-              aria-label="Stjärna för ett bra svar"
-              size={40}
-              className="shrink-0 fill-[#F5C84B] text-[#D9A63A]"
-            />
-          )}
+          {badge}
           <div className="min-w-0 flex-1 space-y-2 whitespace-pre-line">{children}</div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** Grön bock för ett rätt flervalssvar. */
+function CorrectMark() {
+  return (
+    <span
+      role="img"
+      aria-label="Rätt svar"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#6FB076] text-white"
+    >
+      <Check size={20} strokeWidth={3} />
+    </span>
   );
 }
 

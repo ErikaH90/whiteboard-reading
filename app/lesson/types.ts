@@ -22,9 +22,11 @@ export type Level = 1 | 2 | 3;
 /** Progressionen inom varje del: modellering → träna själv → återkalla utan stöd. */
 export type Phase =
   | "intro"
+  | "repetition"
   | "modellering"
   | "traning"
   | "aterkallning"
+  | "karta"
   | "diktamen"
   | "diagnos"
   | "resultat";
@@ -71,6 +73,11 @@ export type FreeTask = {
   placeholder?: string;
   /** Bedömningsmål som skickas till AI:n. */
   rubric: string;
+  /**
+   * Omvisning: hur Edda själv tänker fram svaret. Används bara i träningen,
+   * när eleven har försökt två gånger utan att komma fram.
+   */
+  remodel?: string;
   hint?: Hint;
   /** Används om AI-bedömningen inte svarar. */
   fallbackFeedback: string;
@@ -91,6 +98,8 @@ export type ThinkAloudTask = {
 export type InterestTask = { kind: "interest"; prompt: string };
 export type DictationTask = { kind: "dictation"; prompt: string };
 export type ResultTask = { kind: "result" };
+/** Läskartan som visas när en del är klar. */
+export type MapTask = { kind: "map" };
 
 export type Task =
   | ChoiceTask
@@ -98,6 +107,7 @@ export type Task =
   | ThinkAloudTask
   | InterestTask
   | DictationTask
+  | MapTask
   | ResultTask;
 
 /** Innehåll som är specifikt för ett intresse inom en del. */
@@ -113,6 +123,8 @@ export type PartDefinition = {
   title: string;
   /** Kursmålet för delen – visas för eleven. */
   goal: string;
+  /** Edda säger syftet med delen och knyter an till det eleven redan kan. */
+  bridge: string;
   model: {
     text: ReadingText;
     thinkAloud: ThinkAloudTask;
