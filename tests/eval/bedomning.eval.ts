@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { expect, it } from "vitest";
 import { DEFAULT_EVALUATION_MODEL, evaluateAnswer, type Evaluation } from "../../app/ai/evaluate";
+import { criteriaFor } from "../../app/lesson/criteria";
 import { buildSteps, plainText } from "../../app/lesson/flow";
 import { SVARSSAMLING, type EvalItem } from "./svarssamling";
 
@@ -51,6 +52,7 @@ async function run(item: EvalItem): Promise<Result> {
         question: step.task.prompt,
         studentAnswer: item.answer,
         rubricTarget: step.task.rubric,
+        criteria: criteriaFor(step.task),
         sideText: step.text ? plainText(step.text, item.level) : "",
       },
       { apiKey: apiKey!, model },

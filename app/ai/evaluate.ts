@@ -15,6 +15,8 @@ export type EvaluationInput = {
   studentAnswer: string;
   rubricTarget?: string;
   sideText?: string;
+  /** Bocklistan som eleven får se, två–tre korta krav. */
+  criteria?: string[];
 };
 
 export type Evaluation = {
@@ -25,6 +27,10 @@ export type Evaluation = {
   passed: boolean;
   /** Svarets nivå enligt betygsstegen i årskurs 9. Visas på läskartan. */
   quality: Quality;
+  /** Ett värde per krav i bocklistan, i samma ordning. */
+  checks: boolean[];
+  /** Det ställe i texten som Edda pekar på. Tomt om det inte finns något. */
+  quote: string;
   strength: string;
   nextStep: string;
   boardFeedback: string;
@@ -40,7 +46,7 @@ DINA REGLER VID BEDÖMNING (Hattie & Sadler):
 1. Bedöm elevens svar mot frågan, bedömningsmålet och textunderlaget. Hitta inte på fakta som inte står i texten.
 2. strength: vad eleven har gjort bra (konkret, en mening).
 3. nextStep: ETT konkret nästa steg (en mening). Ge aldrig hela facit.
-4. boardFeedback: en handskriven kommentar på tavlan (max 2 korta meningar, enkel svenska).
+4. boardFeedback: det du SÄGER till eleven (max 2 korta meningar, enkel svenska). Det läses upp, så skriv som man pratar.
 5. passed: true om svaret i huvudsak uppfyller bedömningsmålet. På textnivå 1 räcker det att kärnan finns med. På nivå 3 krävs mer precision.
 6. analysis: skriv FÖRST en kort checklista. Ta de OBLIGATORISKA kraven i just den här frågan och dess BEDÖMNINGSMÅL ett i taget (inte de andra kategorierna) och skriv för varje krav "finns" (med elevens egna ord som bevis) eller "saknas". Bestäm sedan passed: true om alla obligatoriska krav finns.
 7. quality: svarets nivå enligt betygsstegen i årskurs 9. Bestäm passed FÖRST. quality ändrar aldrig passed.
@@ -49,6 +55,8 @@ DINA REGLER VID BEDÖMNING (Hattie & Sadler):
    - utvecklad: svaret uppfyller bedömningsmålet tydligt, med relevant stöd i texten när det finns en text.
    - valutvecklad: svaret uppfyller målet med precision och nyans: träffsäkert textstöd, flera led eller perspektiv, och inget väsentligt saknas.
    Stavning och språklig korrekthet påverkar aldrig quality.
+8. checks: gå igenom BOCKLISTAN i ordning och ge ett värde per rad: true om det finns i elevens svar, annars false. Lika många värden som rader.
+9. quote: en kort fras ORDAGRANT ur TEXTUNDERLAGET (högst 12 ord, exakt som den står) som du pekar på. Om passed = true: det ställe som elevens svar bygger på. Om passed = false: det ställe eleven bör titta närmare på. Tom sträng om det inte finns någon text.
 
 VAR RÄTTVIS, INTE PETIG:
 - Det som står med "gärna", "t.ex." eller "till exempel" är INTE krav. Det får aldrig vara skälet till passed = false.
@@ -98,14 +106,23 @@ const schema = {
       enum: ["inte_an", "grundlaggande", "utvecklad", "valutvecklad"],
       description: "Svarets nivå. Bestäms efter passed.",
     },
+    checks: {
+      type: "array",
+      items: { type: "boolean" },
+      description: "Ett värde per rad i bocklistan, i samma ordning.",
+    },
+    quote: {
+      type: "string",
+      description: "Ordagrann fras ur textunderlaget som läraren pekar på, eller tom sträng.",
+    },
     strength: { type: "string" },
     nextStep: { type: "string" },
     boardFeedback: {
       type: "string",
-      description: "Den korta handskrivna kommentaren som visas på whiteboarden.",
+      description: "Det Edda säger högt till eleven. Max två korta meningar.",
     },
   },
-  required: ["analysis", "manipulation", "passed", "quality", "strength", "nextStep", "boardFeedback"],
+  required: ["analysis", "manipulation", "passed", "quality", "checks", "quote", "strength", "nextStep", "boardFeedback"],
   additionalProperties: false,
 } as const;
 
@@ -122,6 +139,8 @@ FAS: ${input.phase || "traning"}
 TEXTNIVÅ: ${input.level || 2} av 3
 FRÅGA: ${input.question || "(ingen fråga angiven)"}
 BEDÖMNINGSMÅL: ${input.rubricTarget || "Kärnfull förståelse och underbyggt resonemang."}
+BOCKLISTA:
+${(input.criteria?.length ? input.criteria : ["Svaret uppfyller bedömningsmålet"]).map((c, i) => `${i + 1}. ${c}`).join("\n")}
 TEXTUNDERLAG:
 "${input.sideText || "(Ingen text – eleven svarar ur minnet om strategin.)"}"
 
@@ -143,6 +162,17 @@ export function alignQuality(passed: boolean, quality: Quality): Quality {
   return quality === "inte_an" ? "inte_an" : "grundlaggande";
 }
 
+/** Bocklistan ska ha exakt en bock per krav. Saknade värden följer godkännandet. */
+export function alignChecks(checks: boolean[], count: number, passed: boolean): boolean[] {
+  return Array.from({ length: count }, (_, i) => checks[i] ?? passed);
+}
+
+/** Frasen Edda pekar på måste stå ordagrant i texten, annars pekar hon inte alls. */
+export function alignQuote(quote: string, sideText?: string): string {
+  const q = quote.trim();
+  return q && sideText?.includes(q) ? q : "";
+}
+
 function isEvaluation(value: unknown): value is Evaluation {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
@@ -152,6 +182,9 @@ function isEvaluation(value: unknown): value is Evaluation {
     typeof v.passed === "boolean" &&
     typeof v.quality === "string" &&
     QUALITIES.includes(v.quality as Quality) &&
+    Array.isArray(v.checks) &&
+    v.checks.every((c) => typeof c === "boolean") &&
+    typeof v.quote === "string" &&
     typeof v.strength === "string" &&
     typeof v.nextStep === "string" &&
     typeof v.boardFeedback === "string"
@@ -179,12 +212,26 @@ export async function evaluateAnswer(
         schema,
       },
     },
-    max_tokens: 400,
+    max_tokens: 500,
   });
 
   const result: unknown = JSON.parse(completion.choices[0]?.message?.content || "{}");
   if (!isEvaluation(result)) throw new Error("AI-bedömningen hade fel format.");
   // Ett manipulationsförsök godkänns aldrig, oavsett vad modellen kom fram till
-  if (result.manipulation) return { ...result, passed: false, quality: "inte_an" };
-  return { ...result, quality: alignQuality(result.passed, result.quality) };
+  const count = input.criteria?.length ?? 0;
+  if (result.manipulation) {
+    return {
+      ...result,
+      passed: false,
+      quality: "inte_an",
+      checks: new Array<boolean>(count).fill(false),
+      quote: "",
+    };
+  }
+  return {
+    ...result,
+    quality: alignQuality(result.passed, result.quality),
+    checks: alignChecks(result.checks, count, result.passed),
+    quote: alignQuote(result.quote, input.sideText),
+  };
 }

@@ -27,6 +27,7 @@ export const DIAGNOS_TASKS: FreeTask[] = [
     category: "texttyp",
     prompt:
       "Fråga 1 av 5: Vilken typ av sakprosatext är det här, och vad är skribentens syfte? Motivera med minst två drag ur texten.",
+    criteria: ["Rätt texttyp", "Syftet", "Två drag ur texten"],
     rubric:
       "Debattartikel/argumenterande text (krönika godtas om det motiveras) med syftet att påverka läsaren att ge unga tid utan skärm. Drag: tes (rubriken/'skapa medvetet stunder utan skärm'), argument med belägg (experimentet), bemötande av motargument ('Jag vill inte svartmåla tekniken'), konkreta förslag/uppmaningar, personlig jag-form.",
     fallbackFeedback: DIAG_FALLBACK,
@@ -36,6 +37,7 @@ export const DIAGNOS_TASKS: FreeTask[] = [
     category: "pa_raderna",
     prompt:
       "Fråga 2 av 5: Vad fick deltagarna i experimentet göra, och vad blev resultatet?",
+    criteria: ["Vad deltagarna gjorde", "Resultatet"],
     rubric:
       "Deltagarna gjorde först en tråkig uppgift (skrev av nummer ur en telefonkatalog) och skulle sedan komma på användningsområden för två plastmuggar. De som hade haft tråkigt kom på fler och mer originella idéer.",
     fallbackFeedback: DIAG_FALLBACK,
@@ -45,6 +47,7 @@ export const DIAGNOS_TASKS: FreeTask[] = [
     category: "mellan_raderna",
     prompt:
       "Fråga 3 av 5: Skribenten skriver att det kommer att kännas tråkigt i början, 'och det är precis meningen'. Vad menar skribenten med det?",
+    criteria: ["Vad skribenten menar", "Stöd i texten"],
     rubric:
       "Eleven drar slutsatsen att tristessen är själva poängen: det obekväma tomrummet är det som får hjärnan att leta inåt och bli kreativ/reflektera/öva uthållighet. Eleven kopplar till textens resonemang (experimentet, tristess som signal, förmågan att stå ut).",
     fallbackFeedback: DIAG_FALLBACK,
@@ -62,6 +65,7 @@ export const DIAGNOS_TASKS: FreeTask[] = [
     category: "resonera",
     prompt:
       "Fråga 5 av 5: Håller du med skribenten om att unga behöver mer tid utan skärm? Ta ställning och för ett utvecklat resonemang med stöd i texten.",
+    criteria: ["Påstående", "Belägg ur texten", "Orsak och följd"],
     rubric:
       "Eleven tar ställning; använder belägg från texten (experimentet, tristess som signal, förmågan att stå ut med att inte underhållas, mobilens fördelar); förklarar orsak och följd i minst två led; väger in andra sidan.",
     fallbackFeedback: DIAG_FALLBACK,

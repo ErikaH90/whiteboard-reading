@@ -17,6 +17,7 @@ import {
   type AdaptState,
   type Outcome,
 } from "./lesson/flow";
+import { criteriaFor } from "./lesson/criteria";
 import {
   CHOICE_LEVEL,
   EMPTY_MAP,
@@ -45,21 +46,35 @@ import type {
 
 type BoardEntry = {
   sender: "teacher" | "student";
+  /** Det Edda säger (eller eleven skrev). */
   text: string;
   tone?: "feedback" | "hint" | "note";
   ok?: boolean;
-  /** Edda säger detta högt. Texten visas först när hon har pratat klart. */
+  /** Edda sa detta högt. Då visar tavlan bara bocklistan eller stödorden. */
   spoken?: boolean;
   /** Nivån AI-Edda satte på svaret. Visas som en tårtbit i pratbubblan. */
   quality?: Quality;
-  strength?: string;
-  nextStep?: string;
+  /** Bocklistan: vad som finns i svaret och vad som saknas. */
+  checks?: { label: string; met: boolean }[];
+  /** Stödord i en omvisning, med stället i texten som Edda pekar på. */
+  points?: { label: string; highlight?: string }[];
 };
+
+/** Det Edda pekar på i lästexten: grönt för det eleven träffade, gult för det hon visar. */
+type Marks = { phrases: string[]; good: boolean };
+const NO_MARKS: Marks = { phrases: [], good: false };
+
+/** Mellan försöken rensas tavlan: bara själva frågan står kvar. */
+function promptOnly(history: BoardEntry[]): BoardEntry[] {
+  return history.filter((e) => e.sender === "teacher" && !e.tone);
+}
 
 type Evaluation = {
   passed: boolean;
   /** Saknas om AI-bedömningen inte gick att genomföra. */
   quality?: Quality | null;
+  checks?: boolean[];
+  quote?: string;
   strength: string;
   nextStep: string;
   boardFeedback: string;
@@ -83,9 +98,10 @@ const CYCLE: Phase[] = ["modellering", "traning", "aterkallning"];
 
 /**
  * Markerar fraser i lästexten. Frasen som Edda pratar om just nu (`current`)
- * är starkt gul, tidigare fraser är nedtonade så att blicken dras rätt.
+ * är starkt gul, tidigare fraser är nedtonade så att blicken dras rätt. Det eleven
+ * själv träffade i sitt svar (`good`) är grönt.
  */
-function renderHighlighted(text: string, earlier: string[], current: string[]) {
+function renderHighlighted(text: string, earlier: string[], current: string[], good: string[]) {
   const levels = new Array<number>(text.length).fill(0);
   const paint = (phrases: string[], level: number) => {
     for (const phrase of phrases) {
@@ -97,6 +113,7 @@ function renderHighlighted(text: string, earlier: string[], current: string[]) {
   };
   paint(earlier, 1);
   paint(current, 2);
+  paint(good, 3);
 
   const out: React.ReactNode[] = [];
   for (let start = 0; start < text.length; ) {
@@ -109,11 +126,13 @@ function renderHighlighted(text: string, earlier: string[], current: string[]) {
       ) : (
         <mark
           key={start}
-          data-current={levels[start] === 2 ? "" : undefined}
+          data-current={levels[start] >= 2 ? "" : undefined}
           className={
-            levels[start] === 2
-              ? "bg-[#FDE047] px-0.5 rounded-sm font-medium text-zinc-950"
-              : "bg-[#FEF9C3] rounded-sm text-inherit"
+            levels[start] === 3
+              ? "bg-[#BFE3C4] px-0.5 rounded-sm font-medium text-zinc-950"
+              : levels[start] === 2
+                ? "bg-[#FDE047] px-0.5 rounded-sm font-medium text-zinc-950"
+                : "bg-[#FEF9C3] rounded-sm text-inherit"
           }
         >
           {chunk}
@@ -175,7 +194,7 @@ export default function CompleteWhiteboardSystem() {
   const [selectedOption, setSelectedOption] = useState<OptionId | null>(null);
   const [freeText, setFreeText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hintShown, setHintShown] = useState(false);
+  const [marks, setMarks] = useState<Marks>(NO_MARKS);
   const [attempts, setAttempts] = useState(0);
   // Alternativ som eleven redan har provat i träningen
   const [triedOptions, setTriedOptions] = useState<OptionId[]>([]);
@@ -315,7 +334,7 @@ export default function CompleteWhiteboardSystem() {
     readingRef.current
       ?.querySelector("mark[data-current]")
       ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [stepIndex, thoughtIndex, hintShown, boardStage]);
+  }, [stepIndex, thoughtIndex, marks, boardStage]);
 
   // Scrolla tavlan till senaste raden
   useEffect(() => {
@@ -341,7 +360,7 @@ export default function CompleteWhiteboardSystem() {
     setIsPlayingAudio(false);
     setSelectedOption(null);
     setFreeText("");
-    setHintShown(false);
+    setMarks(NO_MARKS);
     setAttempts(0);
     setTriedOptions([]);
     setThoughtIndex(-1);
@@ -485,10 +504,24 @@ export default function CompleteWhiteboardSystem() {
    * luckan igen, på elevens egen text.
    */
 
-  function remodelEntry(text: string): BoardEntry {
-    const full = `Den här var svår, och det är okej. Jag visar hur jag tänker.\n${text}`;
-    if (audioUnlocked) eddaSpeak(full);
-    return { sender: "teacher", tone: "feedback", ok: false, spoken: true, text: full };
+  /** Edda säger svaret högt om ljudet är på. Det som står på tavlan kommer efteråt. */
+  function eddaReply(entry: Omit<BoardEntry, "sender" | "spoken">): BoardEntry {
+    if (audioUnlocked) eddaSpeak(entry.text);
+    return { sender: "teacher", spoken: audioUnlocked, ...entry };
+  }
+
+  /** Omvisning: Edda säger hur hon tänker och pekar ut ställena i texten. */
+  function remodelReply(say: string, points: NonNullable<BoardEntry["points"]>): BoardEntry {
+    setMarks({
+      phrases: points.flatMap((p) => (p.highlight ? [p.highlight] : [])),
+      good: false,
+    });
+    return eddaReply({
+      tone: "feedback",
+      ok: false,
+      points,
+      text: `Den här var svår, och det är okej. Jag visar hur jag tänker.\n${say}`,
+    });
   }
 
   function handleOptionSelect(opt: ChoiceTask["options"][number]) {
@@ -496,17 +529,16 @@ export default function CompleteWhiteboardSystem() {
     if (selectedOption !== null || isSubmitting || boardStage !== "active_task") return;
     if (triedOptions.includes(opt.id)) return;
     const answer: BoardEntry = { sender: "student", text: `${opt.id}: ${opt.text}` };
+    const evidence = helpAllowed && task.hint?.highlight ? [task.hint.highlight] : [];
 
-    // Första felet i träningen: ledtråd och markering, sedan ett försök till
+    // Första felet i träningen: Edda ger en ledtråd och pekar i texten,
+    // sedan får eleven ett försök till. Det valda alternativet stryks.
     if (!opt.isCorrect && helpAllowed && attempts === 0 && task.hint) {
       setAttempts(1);
-      setHintShown(true);
       setTriedOptions([opt.id]);
-      setBoardHistory((prev) => [
-        ...prev,
-        answer,
-        { sender: "teacher", tone: "hint", text: `Inte riktigt än. ${task.hint!.text}` },
-      ]);
+      setMarks({ phrases: evidence, good: false });
+      const hint = eddaReply({ tone: "hint", text: `Inte riktigt än. ${task.hint.text}` });
+      setBoardHistory((prev) => [...promptOnly(prev), hint]);
       return;
     }
 
@@ -519,12 +551,19 @@ export default function CompleteWhiteboardSystem() {
       setReadingMap((m) => record(m, task.category, CHOICE_LEVEL));
     }
 
-    const reply: BoardEntry = opt.isCorrect
-      ? { sender: "teacher", tone: "feedback", ok: true, text: task.correctFeedback }
-      : helpAllowed
-        ? remodelEntry(task.incorrectFeedback)
-        : { sender: "teacher", tone: "feedback", ok: false, text: task.incorrectFeedback };
-    setBoardHistory((prev) => [...prev, answer, reply]);
+    let reply: BoardEntry;
+    if (opt.isCorrect) {
+      setMarks({ phrases: evidence, good: true });
+      reply = eddaReply({ tone: "feedback", ok: true, text: task.correctFeedback });
+    } else if (helpAllowed) {
+      const correct = task.options.find((o) => o.isCorrect)!;
+      reply = remodelReply(task.incorrectFeedback, [
+        { label: `Rätt svar: ${correct.id}`, highlight: evidence[0] },
+      ]);
+    } else {
+      reply = eddaReply({ tone: "feedback", ok: false, text: task.incorrectFeedback });
+    }
+    setBoardHistory((prev) => [...promptOnly(prev), answer, reply]);
     setBoardStage("showing_feedback");
   }
 
@@ -543,6 +582,7 @@ export default function CompleteWhiteboardSystem() {
           question: s.task.prompt,
           studentAnswer: answer,
           rubricTarget: s.task.rubric,
+          criteria: criteriaFor(s.task),
           sideText: s.text ? plainText(s.text, level) : "",
         }),
       });
@@ -572,7 +612,7 @@ export default function CompleteWhiteboardSystem() {
       });
       setFreeText("");
       setBoardHistory((prev) => [
-        ...prev,
+        ...promptOnly(prev),
         answer,
         {
           sender: "teacher",
@@ -588,26 +628,38 @@ export default function CompleteWhiteboardSystem() {
     const ev = await evaluate(step, val, stepLevel);
     const passed = ev?.passed ?? true;
 
-    const feedback: BoardEntry = {
-      sender: "teacher",
+    const labels = criteriaFor(task);
+    const feedback: Omit<BoardEntry, "sender" | "spoken"> = {
       tone: "feedback",
       ok: passed,
       text: ev?.boardFeedback || task.fallbackFeedback,
       quality: ev?.quality || undefined,
-      strength: ev?.strength || undefined,
-      nextStep: ev?.nextStep || undefined,
+      checks:
+        ev?.checks?.length === labels.length
+          ? labels.map((label, i) => ({ label, met: ev.checks![i] }))
+          : undefined,
+    };
+    // Edda pekar i texten: grönt på det eleven träffade, gult på det som saknas
+    const pointAt: Marks = {
+      phrases: ev?.quote
+        ? [ev.quote]
+        : !passed && helpAllowed && task.hint?.highlight
+          ? [task.hint.highlight]
+          : [],
+      good: passed,
     };
 
     // Ett svar efter ledtråd och ett nytt försök räknas som svar med stöd
     if (countsOnMap(step.phase)) recordOnMap(task.category, ev, attempts > 0);
     setIsSubmitting(false);
 
-    // Första försöket i träningen räckte inte: Eddas nästa steg och en
-    // markering i texten, och eleven förbättrar sitt svar direkt i rutan.
+    // Första försöket i träningen räckte inte: Edda säger vad som saknas,
+    // pekar i texten, och eleven förbättrar sitt svar direkt i rutan.
     if (!passed && helpAllowed && attempts === 0) {
       setAttempts(1);
-      setHintShown(true);
-      setBoardHistory((prev) => [...prev, feedback]);
+      setMarks(pointAt);
+      const reply = eddaReply(feedback);
+      setBoardHistory((prev) => [...promptOnly(prev), reply]);
       return;
     }
 
@@ -616,8 +668,14 @@ export default function CompleteWhiteboardSystem() {
       passed ? (attempts > 0 ? "correct_with_support" : "correct") : "wrong",
     );
     setFreeText("");
-    const reply = !passed && helpAllowed && task.remodel ? remodelEntry(task.remodel) : feedback;
-    setBoardHistory((prev) => [...prev, answer, reply]);
+    let reply: BoardEntry;
+    if (!passed && helpAllowed && task.remodel) {
+      reply = remodelReply(task.remodel.say, task.remodel.points);
+    } else {
+      setMarks(pointAt);
+      reply = eddaReply(feedback);
+    }
+    setBoardHistory((prev) => [...promptOnly(prev), answer, reply]);
     setAttempts((a) => a + 1);
     setBoardStage("showing_feedback");
   }
@@ -665,13 +723,9 @@ export default function CompleteWhiteboardSystem() {
       if (t.highlight) (i === thoughtIndex ? currentHighlights : earlierHighlights).push(t.highlight);
     });
   }
-  if (
-    hintShown &&
-    !supportFree &&
-    (task.kind === "choice" || task.kind === "free") &&
-    task.hint?.highlight
-  ) {
-    currentHighlights.push(task.hint.highlight);
+  const goodHighlights: string[] = [];
+  if (!supportFree || boardStage === "showing_feedback") {
+    (marks.good ? goodHighlights : currentHighlights).push(...marks.phrases);
   }
   // Under modelleringen berättar Edda själv; tavlan visar bara det hon just har sagt.
   const showHistory = task.kind !== "think_aloud";
@@ -866,42 +920,60 @@ export default function CompleteWhiteboardSystem() {
                       </EddaSays>
                     );
                   }
+                  // Efter talet står bara bocklistan eller stödorden kvar på tavlan
+                  const structured = !!item.checks || !!item.points;
                   return (
-                    <div key={idx} className="space-y-4">
-                      <EddaSays
-                        badge={
-                          item.quality && item.quality !== "inte_an" ? (
-                            <LevelWedge level={levelOf(item.quality)} />
-                          ) : item.tone === "feedback" && item.ok && task.kind === "choice" ? (
-                            <CorrectMark />
-                          ) : null
-                        }
-                      >
-                        {item.text}
-                      </EddaSays>
-                      {(item.strength || item.nextStep) && (
-                        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4 space-y-3">
-                          {item.strength && (
-                            <div>
-                              <p className="font-whiteboard text-lg text-zinc-800">
-                                Det här gjorde du bra
-                              </p>
-                              <p className="font-whiteboard text-lg text-zinc-600">
-                                {item.strength}
-                              </p>
-                            </div>
-                          )}
-                          {item.nextStep && (
-                            <div>
-                              <p className="font-whiteboard text-lg text-zinc-800">Nästa steg</p>
-                              <p className="font-whiteboard text-lg text-zinc-600">
-                                {item.nextStep}
-                              </p>
-                            </div>
-                          )}
-                        </div>
+                    <EddaSays
+                      key={idx}
+                      badge={
+                        item.quality && item.quality !== "inte_an" ? (
+                          <LevelWedge level={levelOf(item.quality)} />
+                        ) : item.tone === "feedback" && item.ok && task.kind === "choice" ? (
+                          <CorrectMark />
+                        ) : null
+                      }
+                    >
+                      {(!structured || !item.spoken) && <p>{item.text}</p>}
+                      {item.checks && (
+                        <ul className="space-y-1.5">
+                          {item.checks.map((c) => (
+                            <li
+                              key={c.label}
+                              className="font-whiteboard flex items-center gap-3 text-xl"
+                            >
+                              {c.met ? (
+                                <CorrectMark small />
+                              ) : (
+                                <span
+                                  role="img"
+                                  aria-label="Saknas"
+                                  className="h-6 w-6 shrink-0 rounded-full border-2 border-zinc-400"
+                                />
+                              )}
+                              <span className={c.met ? "text-zinc-500" : "text-zinc-900"}>
+                                {c.label}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       )}
-                    </div>
+                      {item.points && (
+                        <ol className="space-y-1.5">
+                          {item.points.map((point, i) => (
+                            <li key={point.label} className="font-whiteboard text-xl">
+                              <span className="font-bold text-[#5B46D6]">{i + 1}.</span>{" "}
+                              {point.highlight ? (
+                                <mark className="rounded-sm bg-[#FDE047] px-1 text-zinc-950">
+                                  {point.label}
+                                </mark>
+                              ) : (
+                                point.label
+                              )}
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </EddaSays>
                   );
                 })}
 
@@ -1162,7 +1234,7 @@ export default function CompleteWhiteboardSystem() {
                         key={i}
                         className={p === step.text?.signature ? "text-right italic text-sm" : ""}
                       >
-                        {renderHighlighted(p, earlierHighlights, currentHighlights)}
+                        {renderHighlighted(p, earlierHighlights, currentHighlights, goodHighlights)}
                       </p>
                     ))}
                   </div>
@@ -1291,14 +1363,16 @@ function EddaSays({
 }
 
 /** Grön bock för ett rätt flervalssvar. */
-function CorrectMark() {
+function CorrectMark({ small = false }: { small?: boolean }) {
   return (
     <span
       role="img"
-      aria-label="Rätt svar"
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#6FB076] text-white"
+      aria-label={small ? "Finns med" : "Rätt svar"}
+      className={`flex shrink-0 items-center justify-center rounded-full bg-[#6FB076] text-white ${
+        small ? "h-6 w-6" : "h-8 w-8"
+      }`}
     >
-      <Check size={20} strokeWidth={3} />
+      <Check size={small ? 15 : 20} strokeWidth={3} />
     </span>
   );
 }

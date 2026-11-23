@@ -4,7 +4,7 @@ const summaryTemplateHint: Hint = {
   text: "Använd mallen: 'Texten handlar om ... Vissa menar att ... medan andra ... Just nu ...' Stryk exempel och detaljer.",
 };
 
-function summaryTask(rubric: string, withSupport: boolean, remodel?: string): FreeTask {
+function summaryTask(rubric: string, withSupport: boolean, remodel?: FreeTask["remodel"]): FreeTask {
   return {
     kind: "free",
     category: "sammanfatta",
@@ -160,7 +160,15 @@ export const DEL3: PartDefinition = {
         summaryTask(
           "Sammanfattningen tar med: ämnet (barn under tolv får ofta inte tävla om placeringar), skälet för (glädje/utveckling, många slutar annars), skälet emot (barn behöver lära sig vinna och förlora) och att frågan fortfarande diskuteras. Detaljer som simklubben i Västerås ska inte vara med. Inga egna åsikter, egna ord.",
           true,
-          "Jag tar en sak ur varje stycke. Ämnet: barn under tolv får ofta inte tävla om placeringar. Skälet för: de ska ha roligt och inte sluta. Skälet emot: de behöver lära sig vinna och förlora. Läget nu: frågan diskuteras fortfarande. Simklubben är ett exempel, så den stryker jag.",
+          {
+            say: "Jag tar en sak ur varje stycke. Ämnet: barn under tolv får ofta inte tävla om placeringar. Skälet för: de ska ha roligt och inte sluta. Skälet emot: de behöver lära sig vinna och förlora. Läget nu: frågan diskuteras fortfarande. Simklubben är ett exempel, så den stryker jag.",
+            points: [
+              { label: "Ämnet", highlight: "får barn under tolv år inte tävla om placeringar" },
+              { label: "Skälet för", highlight: "barn ska ha roligt och utvecklas i sin egen takt" },
+              { label: "Skälet emot", highlight: "barn behöver lära sig att vinna och förlora" },
+              { label: "Läget nu", highlight: "diskuteras fortfarande" },
+            ],
+          },
         ),
       ],
       recallText: {
@@ -234,7 +242,15 @@ export const DEL3: PartDefinition = {
         summaryTask(
           "Sammanfattningen tar med: ämnet (loot boxes = köpta lådor med slumpmässigt innehåll), kritiken (liknar hasardspel, risk för unga, vissa länder har förbjudit/begränsat dem), spelföretagens svar (frivilligt, finansierar utveckling) och läget i Sverige (diskussion om regler/åldersgräns). Guldspelaren ska inte vara med. Egna ord, inga egna åsikter.",
           true,
-          "Jag tar en sak ur varje stycke. Ämnet: loot boxes, lådor man köper utan att veta vad man får. Kritikerna: de liknar hasardspel. Spelföretagen: de är frivilliga och betalar för utvecklingen. Läget nu: Sverige diskuterar nya regler. Guldspelaren är ett exempel, så den stryker jag.",
+          {
+            say: "Jag tar en sak ur varje stycke. Ämnet: loot boxes, lådor man köper utan att veta vad man får. Kritikerna: de liknar hasardspel. Spelföretagen: de är frivilliga och betalar för utvecklingen. Läget nu: Sverige diskuterar nya regler. Guldspelaren är ett exempel, så den stryker jag.",
+            points: [
+              { label: "Ämnet", highlight: "virtuella lådor med slumpmässigt innehåll" },
+              { label: "Kritiken", highlight: "fungerar som hasardspel" },
+              { label: "Företagens svar", highlight: "en frivillig del av spelet" },
+              { label: "Läget nu", highlight: "om det behövs nya regler" },
+            ],
+          },
         ),
       ],
       recallText: {
@@ -316,7 +332,15 @@ export const DEL3: PartDefinition = {
         summaryTask(
           "Sammanfattningen tar med: ämnet (stadsträdens nytta), nyttorna (skugga/svalka, tar upp regnvatten, människor mår bättre), problemen (lite plats, vägsalt, avgaser) och åtgärden (kommuner planerar fler träd och bättre växtplatser). Linden ska inte vara med. Egna ord, inga egna åsikter.",
           true,
-          "Jag tar en sak ur varje stycke. Ämnet: träd gör nytta i städer. Nyttan: skugga, de tar upp regnvatten och människor mår bättre. Problemet: träden har det tufft. Läget nu: kommuner planerar fler träd. Linden är ett exempel, så den stryker jag.",
+          {
+            say: "Jag tar en sak ur varje stycke. Ämnet: träd gör nytta i städer. Nyttan: skugga, de tar upp regnvatten och människor mår bättre. Problemet: träden har det tufft. Läget nu: kommuner planerar fler träd. Linden är ett exempel, så den stryker jag.",
+            points: [
+              { label: "Ämnet", highlight: "Träd i städer gör mer än att se fina ut." },
+              { label: "Nyttan", highlight: "ger skugga" },
+              { label: "Problemet", highlight: "stadsträd har det tufft" },
+              { label: "Läget nu", highlight: "plantera fler träd" },
+            ],
+          },
         ),
       ],
       recallText: {
@@ -352,6 +376,7 @@ export const DEL3: PartDefinition = {
     category: "sammanfatta",
     prompt:
       "Svara ur minnet, utan text: Beskriv steg för steg hur du gör när du sammanfattar en text. Vad tar du med, och vad tar du bort?",
+    criteria: ["Ämnet först", "Huvudpoängen i varje stycke", "Stryka detaljer"],
     rubric:
       "Eleven beskriver: ta reda på ämnet/huvudtanken, hitta huvudpoängen i varje stycke, stryka detaljer/exempel/citat, ta med båda sidor om det finns flera, skriva kort med egna ord och utan egna åsikter.",
     fallbackFeedback:

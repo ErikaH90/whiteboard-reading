@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { criteriaFor } from "../../app/lesson/criteria";
 import { INTERESTS, PARTS, buildSteps, paragraphsFor } from "../../app/lesson/flow";
 import { DIAGNOS_TEXT } from "../../app/lesson/content/diagnos";
 import type { LessonStep, ReadingText } from "../../app/lesson/types";
@@ -130,7 +131,14 @@ describe("träning: hjälpen kommer utan att eleven ber om den", () => {
       const t = s.task;
       if (t.kind !== "choice" && t.kind !== "free") throw new Error("fel uppgiftstyp");
       expect(t.hint?.text.trim().length).toBeGreaterThan(0);
-      if (t.kind === "free") expect(t.remodel?.trim().length).toBeGreaterThan(0);
+      if (t.kind === "free") {
+        expect(t.remodel?.say.trim().length).toBeGreaterThan(0);
+        expect(t.remodel?.points.length).toBeGreaterThanOrEqual(2);
+        for (const point of t.remodel?.points ?? []) {
+          expect(point.label.length, point.label).toBeLessThanOrEqual(34);
+          if (point.highlight) expect(inBaseText(s.text, point.highlight), point.highlight).toBe(true);
+        }
+      }
     },
   );
 
@@ -139,5 +147,17 @@ describe("träning: hjälpen kommer utan att eleven ber om den", () => {
       if (s.phase === "traning" || s.task.kind !== "free") continue;
       expect(s.task.remodel, s.id).toBeUndefined();
     }
+  });
+});
+
+describe("bocklistan", () => {
+  const free = allSteps.filter((s) => s.task.kind === "free");
+
+  it.each(free.map((s) => [label(s), s] as const))("%s har en till tre korta krav", (_, s) => {
+    if (s.task.kind !== "free") return;
+    const criteria = criteriaFor(s.task);
+    expect(criteria.length).toBeGreaterThanOrEqual(1);
+    expect(criteria.length).toBeLessThanOrEqual(3);
+    for (const c of criteria) expect(c.length, c).toBeLessThanOrEqual(30);
   });
 });

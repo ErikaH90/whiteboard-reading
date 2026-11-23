@@ -6,6 +6,7 @@ const recallTexttyp: FreeTask = {
   category: "texttyp",
   prompt:
     "Vilken typ av sakprosatext är det här, och vad är syftet med den? Motivera med två drag från texten.",
+  criteria: ["Rätt texttyp", "Syftet", "Två drag ur texten"],
   rubric:
     "Eleven identifierar rätt texttyp (nyhetsartikel = informera; debattartikel/insändare = påverka) och motiverar med två konkreta drag kopplade till texten. Nyhetsartikel: neutral ton, fakta/siffror, det viktigaste först, citat från källa. Debattartikel/insändare: tes/krav, argument, värdeladdade ord, retoriska frågor, uppmaning, avsändare.",
   fallbackFeedback:
@@ -135,7 +136,13 @@ export const DEL1: PartDefinition = {
           rubric:
             "Eleven namnger två relevanta särdrag för debattartikel (tes/krav, argument, värdeladdade ord som 'orimligt', uppmaning) och kopplar dem till konkreta ställen i texten.",
           remodel:
-            "Jag letar efter drag som visar att någon tycker något. 'Det är orimligt' är ett värdeladdat ord, och 'vi kräver' är ett krav. Det är två drag, och båda hör till en debattartikel.",
+            {
+              say: "Jag letar efter drag som visar att någon tycker något. 'Det är orimligt' är ett värdeladdat ord, och 'vi kräver' är ett krav. Det är två drag, och båda hör till en debattartikel.",
+              points: [
+                { label: "Värdeladdat ord", highlight: "Det är orimligt." },
+                { label: "Krav", highlight: "kräver vi" },
+              ],
+            },
           hint: {
             text: "Tänk på modellen: tes, argument och värdeladdade ord. Vilket ord visar vad skribenten tycker om priset?",
             highlight: "Det är orimligt.",
@@ -206,7 +213,13 @@ export const DEL1: PartDefinition = {
           rubric:
             "Eleven namnger två relevanta särdrag för nyhetsartikel (neutral ton, fakta om vad/var/när direkt i början, citat från källa, skribenten tar inte ställning) och kopplar dem till texten.",
           remodel:
-            "Jag tittar på första meningen. Där får jag veta vad, var och när direkt, utan att skribenten tycker något. Sedan citeras rektorn, som är en källa. Neutral ton och citat från en källa är två drag i en nyhetsartikel.",
+            {
+              say: "Jag tittar på första meningen. Där får jag veta vad, var och när direkt, utan att skribenten tycker något. Sedan citeras rektorn, som är en källa. Neutral ton och citat från en källa är två drag i en nyhetsartikel.",
+              points: [
+                { label: "Vad, var och när direkt", highlight: "Från och med hösten kan elever på Norrby gymnasium välja e-sport som profil." },
+                { label: "Citat från en källa", highlight: "säger rektor Amir Haddad" },
+              ],
+            },
           hint: {
             text: "Titta på första meningen: vad, var och när får du veta direkt? Och vem är det som citeras?",
             highlight:
@@ -280,7 +293,13 @@ export const DEL1: PartDefinition = {
           rubric:
             "Eleven namnger två särdrag för informerande/förklarande text (neutral ton, fakta och siffror, förklarar samband med t.ex. 'vilket gör att', fackord, inga åsikter) och kopplar dem till texten.",
           remodel:
-            "Jag letar efter fakta och förklaringar. 'Ungefär en tredjedel' är en siffra, och 'vilket gör att' förklarar hur något hänger ihop. Jag hittar ingen åsikt. Det är två drag i en faktatext.",
+            {
+              say: "Jag letar efter fakta och förklaringar. 'Ungefär en tredjedel' är en siffra, och 'vilket gör att' förklarar hur något hänger ihop. Jag hittar ingen åsikt. Det är två drag i en faktatext.",
+              points: [
+                { label: "Fakta med siffror", highlight: "Ungefär en tredjedel" },
+                { label: "Förklarar samband", highlight: "vilket gör att" },
+              ],
+            },
           hint: {
             text: "Leta efter siffror och ord som förklarar hur något hänger ihop, till exempel 'vilket gör att'.",
             highlight: "Ungefär en tredjedel",
@@ -316,6 +335,7 @@ export const DEL1: PartDefinition = {
     category: "texttyp",
     prompt:
       "Svara ur minnet, utan text: Hur tar du reda på om en sakprosatext vill påverka eller informera? Nämn minst tre saker du letar efter.",
+    criteria: ["Tre saker att leta efter"],
     rubric:
       "Eleven nämner minst tre relevanta kännetecken. Påverkande text: tes/åsikt, argument, värdeladdade ord, retoriska frågor, uppmaning, avsändare som tar ställning. Informerande text: neutral ton, fakta/siffror, citat från källor, svarar på vad/var/när, förklarar samband.",
     fallbackFeedback:

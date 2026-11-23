@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
       model: process.env.OPENAI_MODEL,
     });
     // Analysen och manipulationsflaggan stannar på servern
-    const { passed, quality, strength, nextStep, boardFeedback } = result;
-    return NextResponse.json({ passed, quality, strength, nextStep, boardFeedback });
+    const { passed, quality, checks, quote, strength, nextStep, boardFeedback } = result;
+    return NextResponse.json({ passed, quality, checks, quote, strength, nextStep, boardFeedback });
   } catch (error: unknown) {
     console.error(
       "Whiteboard-bedömning misslyckades:",

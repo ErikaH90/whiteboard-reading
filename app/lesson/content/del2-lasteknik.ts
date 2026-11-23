@@ -135,7 +135,14 @@ export const DEL2: PartDefinition = {
           rubric:
             "Eleven drar slutsatsen att tränaren förändrade gemenskapen i laget och att det fick Elin att stanna/trivas, och stöder det med ledtrådar (samlingen på isen, byta omklädningsrum i par, lagkapten ett halvår senare).",
           remodel:
-            "Jag jämför före och efter. Först pratade ingen med Elin, och hon ville sluta. Sedan ändrade Johan samlingen och omklädningsrummen, och ett halvår senare var hon lagkapten. Min slutsats är att Johan fick henne att bli en del av laget, fast det inte står rakt ut.",
+            {
+              say: "Jag jämför före och efter. Först pratade ingen med Elin, och hon ville sluta. Sedan ändrade Johan samlingen och omklädningsrummen, och ett halvår senare var hon lagkapten. Min slutsats är att Johan fick henne att bli en del av laget, fast det inte står rakt ut.",
+              points: [
+                { label: "Före", highlight: "i omklädningsrummet pratade ingen med henne" },
+                { label: "Johan ändrar", highlight: "lät spelarna byta omklädningsrum i par" },
+                { label: "Efter", highlight: "Ett halvår senare var Elin lagkapten." },
+              ],
+            },
           hint: {
             text: "Jämför hur det var före och efter att Johan ändrade något. Vad hände med Elin?",
             highlight: "Ett halvår senare var Elin lagkapten.",
@@ -251,7 +258,13 @@ export const DEL2: PartDefinition = {
           rubric:
             "Eleven drar slutsatsen att vänskapen är äkta/stark/omtänksam trots avståndet och stöder det med ledtrådar (ses varje torsdag, skämtar med varandra, klagar inte, skickar video efter segern).",
           remodel:
-            "Jag letar efter vad de gör för varandra. De spelade vidare utan att klaga när Noahs internet gick ner, och efteråt skickade de en video från segern. Min slutsats är att vänskapen är på riktigt, fast de aldrig har träffats.",
+            {
+              say: "Jag letar efter vad de gör för varandra. De spelade vidare utan att klaga när Noahs internet gick ner, och efteråt skickade de en video från segern. Min slutsats är att vänskapen är på riktigt, fast de aldrig har träffats.",
+              points: [
+                { label: "De klagar inte", highlight: "spelade de andra fyra vidare utan att klaga" },
+                { label: "De delar segern", highlight: "skickade de honom en video från segern" },
+              ],
+            },
           hint: {
             text: "Leta efter saker de GÖR för varandra. Vad säger de om vänskapen?",
             highlight: "skickade de honom en video från segern",
@@ -366,7 +379,14 @@ export const DEL2: PartDefinition = {
           rubric:
             "Eleven drar slutsatsen att vargen väcker helt olika känslor hos olika grupper (hot mot försörjning vs. upplevelse av vild natur) och stöder med texten (döda lamm/sover dåligt vs. turister åker långt; ordet 'Samtidigt' markerar kontrast).",
           remodel:
-            "Ordet 'Samtidigt' visar att två saker ställs mot varandra. Karin hittade döda lamm och sover dåligt, men turister åker långt för att höra vargarna. Min slutsats är att skribenten vill visa att vargen väcker helt olika känslor hos olika människor.",
+            {
+              say: "Ordet 'Samtidigt' visar att två saker ställs mot varandra. Karin hittade döda lamm och sover dåligt, men turister åker långt för att höra vargarna. Min slutsats är att skribenten vill visa att vargen väcker helt olika känslor hos olika människor.",
+              points: [
+                { label: "Karin: ett hot", highlight: "hittade jag tre döda lamm" },
+                { label: "Kontrast", highlight: "Samtidigt" },
+                { label: "Turisterna: en upplevelse", highlight: "åker turister långt" },
+              ],
+            },
           hint: {
             text: "Ordet 'Samtidigt' visar en kontrast. Vad tycker Karin om vargen, och vad tycker turisterna?",
             highlight: "Samtidigt",
@@ -424,6 +444,7 @@ export const DEL2: PartDefinition = {
     category: "mellan_raderna",
     prompt:
       "Svara ur minnet, utan text: Vad är skillnaden mellan att läsa PÅ raderna och MELLAN raderna? Berätta också när du skumläser, sökläser och närläser.",
+    criteria: ["På raderna", "Mellan raderna", "Lästeknikerna"],
     rubric:
       "Eleven förklarar att på raderna = information som står uttryckligen i texten, och mellan raderna = slutsatser som man drar genom att kombinera ledtrådar med egen logik. Eleven beskriver lästeknikerna: skumläsa för överblick, sökläsa efter specifik information, närläsa för djupare förståelse.",
     fallbackFeedback:

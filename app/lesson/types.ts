@@ -77,7 +77,14 @@ export type FreeTask = {
    * Omvisning: hur Edda själv tänker fram svaret. Används bara i träningen,
    * när eleven har försökt två gånger utan att komma fram.
    */
-  remodel?: string;
+  remodel?: {
+    /** Det Edda säger. */
+    say: string;
+    /** Stödorden som står kvar på tavlan, med stället i texten hon pekar på. */
+    points: { label: string; highlight?: string }[];
+  };
+  /** Egen bocklista för frågan. Annars gäller standardkraven för förmågan. */
+  criteria?: string[];
   hint?: Hint;
   /** Används om AI-bedömningen inte svarar. */
   fallbackFeedback: string;
