@@ -113,7 +113,7 @@ export function buildSteps(interest: Interest): LessonStep[] {
       task: {
         kind: "interest",
         prompt:
-          "Hej! Jag heter Edda. Vi ska träna läsförståelse tillsammans, steg för steg. Först vill jag veta: vad är du mest intresserad av? Då väljer jag texter som passar dig.",
+          "Hej! Jag heter Edda. Vad är du mest intresserad av?",
       },
     },
   ];
@@ -230,7 +230,7 @@ export function buildSteps(interest: Interest): LessonStep[] {
     task: {
       kind: "dictation",
       prompt:
-        "Innan slutdiagnosen: tryck på mikrofonen och läs texten till höger högt med tydlig röst. Jag lyssnar på ditt läsflyt.",
+        "Tryck på mikrofonen och läs texten till höger högt.",
     },
   });
 

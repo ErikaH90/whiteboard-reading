@@ -46,11 +46,11 @@ import type {
 
 type BoardEntry = {
   sender: "teacher" | "student";
-  /** Det Edda säger (eller eleven skrev). */
+  /** Det korta som står på tavlan (eller det eleven skrev). Det Edda säger högt står aldrig här. */
   text: string;
   tone?: "feedback" | "hint" | "note";
   ok?: boolean;
-  /** Edda sa detta högt. Då visar tavlan bara bocklistan eller stödorden. */
+  /** Edda säger något högt till detta. Tavlan visar prickarna tills hon har tystnat. */
   spoken?: boolean;
   /** Nivån AI-Edda satte på svaret. Visas som en tårtbit i pratbubblan. */
   quality?: Quality;
@@ -144,16 +144,15 @@ function renderHighlighted(text: string, earlier: string[], current: string[], g
   return out;
 }
 
+/** Kort rad på tavlan när en ny fas börjar. */
 function phaseIntro(step: LessonStep): string | null {
   switch (step.phase) {
     case "traning":
-      return "Nu är det din tur på en ny text. Försök själv först. Kör du fast hjälper jag dig.";
+      return "Din tur. Försök själv först.";
     case "aterkallning":
-      return step.text
-        ? "Ny text, och nu svarar du helt själv. Inga ledtrådar och ingen uppläsning. Visa vad du kan!"
-        : null;
+      return step.text ? "Ny text. Nu svarar du helt själv." : null;
     case "diagnos":
-      return "En lång text, som på nationella provet. Du svarar på fem frågor helt utan stöd. Ta den tid du behöver.";
+      return "Lång text, fem frågor, inget stöd.";
     default:
       return null;
   }
@@ -389,8 +388,8 @@ export default function CompleteWhiteboardSystem() {
             tone: "note",
             text:
               level > last
-                ? `Du klarar dig bra utan stöd, så den här texten är längre och lite svårare (nivå ${level} av 3).`
-                : `Förra texten var svår. Den här är lite kortare (nivå ${level} av 3), så bygger vi upp det igen.`,
+                ? `Längre text den här gången (nivå ${level} av 3).`
+                : `Förra texten var svår. Den här är kortare (nivå ${level} av 3).`,
           });
         }
         lastLeveledLevelRef.current = level;
@@ -485,6 +484,10 @@ export default function CompleteWhiteboardSystem() {
     const choice = INTERESTS.find((i) => i.id === id)!;
     setInterest(id);
     setAudioUnlocked(true);
+    // Valet är ett klick, så ljudet får starta här
+    eddaSpeak(
+      `Toppen! Jag väljer texter om ${choice.label.toLowerCase()}. Vi börjar med korta texter, och jag gör dem längre i takt med att du blir säkrare. Målet är att du ska klara en lång text som på nationella provet.`,
+    );
     setBoardHistory((prev) => [
       ...prev,
       { sender: "student", text: `${choice.emoji} ${choice.label}` },
@@ -492,7 +495,8 @@ export default function CompleteWhiteboardSystem() {
         sender: "teacher",
         tone: "feedback",
         ok: true,
-        text: `Toppen! Jag väljer texter om ${choice.label.toLowerCase()}. Vi börjar med korta texter, och jag gör dem längre i takt med att du blir säkrare. Målet är att du ska klara en lång text som på nationella provet.`,
+        spoken: true,
+        text: "Korta texter först, längre sedan.",
       },
     ]);
     setBoardStage("showing_feedback");
@@ -504,10 +508,14 @@ export default function CompleteWhiteboardSystem() {
    * luckan igen, på elevens egen text.
    */
 
-  /** Edda säger svaret högt om ljudet är på. Det som står på tavlan kommer efteråt. */
-  function eddaReply(entry: Omit<BoardEntry, "sender" | "spoken">): BoardEntry {
-    if (audioUnlocked) eddaSpeak(entry.text);
-    return { sender: "teacher", spoken: audioUnlocked, ...entry };
+  /**
+   * Edda säger `say` högt om ljudet är på. Tavlan visar prickarna medan hon
+   * pratar, och sedan bara det korta i `entry` för den som missade.
+   */
+  function eddaReply(entry: Omit<BoardEntry, "sender" | "spoken">, say?: string): BoardEntry {
+    const speak = audioUnlocked && !!say;
+    if (speak) eddaSpeak(say);
+    return { sender: "teacher", spoken: speak, ...entry };
   }
 
   /** Omvisning: Edda säger hur hon tänker och pekar ut ställena i texten. */
@@ -516,12 +524,10 @@ export default function CompleteWhiteboardSystem() {
       phrases: points.flatMap((p) => (p.highlight ? [p.highlight] : [])),
       good: false,
     });
-    return eddaReply({
-      tone: "feedback",
-      ok: false,
-      points,
-      text: `Den här var svår, och det är okej. Jag visar hur jag tänker.\n${say}`,
-    });
+    return eddaReply(
+      { tone: "feedback", ok: false, points, text: "" },
+      `Den här var svår, och det är okej. Jag visar hur jag tänker. ${say}`,
+    );
   }
 
   function handleOptionSelect(opt: ChoiceTask["options"][number]) {
@@ -537,7 +543,10 @@ export default function CompleteWhiteboardSystem() {
       setAttempts(1);
       setTriedOptions([opt.id]);
       setMarks({ phrases: evidence, good: false });
-      const hint = eddaReply({ tone: "hint", text: `Inte riktigt än. ${task.hint.text}` });
+      const hint = eddaReply(
+        { tone: "hint", text: evidence.length ? "Titta på det gula i texten." : task.hint.text },
+        `Inte riktigt än. ${task.hint.text}`,
+      );
       setBoardHistory((prev) => [...promptOnly(prev), hint]);
       return;
     }
@@ -551,17 +560,20 @@ export default function CompleteWhiteboardSystem() {
       setReadingMap((m) => record(m, task.category, CHOICE_LEVEL));
     }
 
+    const correct = task.options.find((o) => o.isCorrect)!;
     let reply: BoardEntry;
     if (opt.isCorrect) {
       setMarks({ phrases: evidence, good: true });
-      reply = eddaReply({ tone: "feedback", ok: true, text: task.correctFeedback });
+      reply = eddaReply({ tone: "feedback", ok: true, text: "Rätt!" }, task.correctFeedback);
     } else if (helpAllowed) {
-      const correct = task.options.find((o) => o.isCorrect)!;
       reply = remodelReply(task.incorrectFeedback, [
         { label: `Rätt svar: ${correct.id}`, highlight: evidence[0] },
       ]);
     } else {
-      reply = eddaReply({ tone: "feedback", ok: false, text: task.incorrectFeedback });
+      reply = eddaReply(
+        { tone: "feedback", ok: false, text: `Rätt svar: ${correct.id}` },
+        task.incorrectFeedback,
+      );
     }
     setBoardHistory((prev) => [...promptOnly(prev), answer, reply]);
     setBoardStage("showing_feedback");
@@ -617,7 +629,7 @@ export default function CompleteWhiteboardSystem() {
         {
           sender: "teacher",
           tone: "note",
-          text: "Svaret är sparat ✓ Jag rättar allt när du är klar med alla frågor.",
+          text: "Svaret är sparat.",
         },
       ]);
       setBoardStage("showing_feedback");
@@ -629,15 +641,18 @@ export default function CompleteWhiteboardSystem() {
     const passed = ev?.passed ?? true;
 
     const labels = criteriaFor(task);
+    const checks =
+      ev?.checks?.length === labels.length
+        ? labels.map((label, i) => ({ label, met: ev.checks![i] }))
+        : undefined;
+    // Edda säger sin kommentar. På tavlan står bara bocklistan.
+    const say = ev?.boardFeedback || task.fallbackFeedback;
     const feedback: Omit<BoardEntry, "sender" | "spoken"> = {
       tone: "feedback",
       ok: passed,
-      text: ev?.boardFeedback || task.fallbackFeedback,
+      text: checks ? "" : say,
       quality: ev?.quality || undefined,
-      checks:
-        ev?.checks?.length === labels.length
-          ? labels.map((label, i) => ({ label, met: ev.checks![i] }))
-          : undefined,
+      checks,
     };
     // Edda pekar i texten: grönt på det eleven träffade, gult på det som saknas
     const pointAt: Marks = {
@@ -658,7 +673,7 @@ export default function CompleteWhiteboardSystem() {
     if (!passed && helpAllowed && attempts === 0) {
       setAttempts(1);
       setMarks(pointAt);
-      const reply = eddaReply(feedback);
+      const reply = eddaReply(feedback, say);
       setBoardHistory((prev) => [...promptOnly(prev), reply]);
       return;
     }
@@ -673,7 +688,7 @@ export default function CompleteWhiteboardSystem() {
       reply = remodelReply(task.remodel.say, task.remodel.points);
     } else {
       setMarks(pointAt);
-      reply = eddaReply(feedback);
+      reply = eddaReply(feedback, say);
     }
     setBoardHistory((prev) => [...promptOnly(prev), answer, reply]);
     setAttempts((a) => a + 1);
@@ -706,7 +721,8 @@ export default function CompleteWhiteboardSystem() {
 
     const report = `Läshastighet: 138 ord/minut. Intonation och flyt: Mycket god. Under lektionen var du säkrast på det du tränat mest, men '${CATEGORY_LABELS[weakest].toLowerCase()}' behöver mer träning. Nu väntar slutdiagnosen!`;
 
-    setBoardHistory((prev) => [...prev, { sender: "teacher", tone: "feedback", ok: true, text: report }]);
+    const reply = eddaReply({ tone: "feedback", ok: true, text: "Nu väntar slutdiagnosen." }, report);
+    setBoardHistory((prev) => [...prev, reply]);
     setBoardStage("showing_feedback");
   }
 
@@ -915,13 +931,10 @@ export default function CompleteWhiteboardSystem() {
                   // Det Edda säger högt visas först när hon har pratat klart
                   if (item.spoken && idx === boardHistory.length - 1 && eddaSpeaking) {
                     return (
-                      <EddaSays key={idx} label="Edda berättar">
-                        <TalkingDots />
-                      </EddaSays>
+                      <EddaTalking key={idx} />
                     );
                   }
                   // Efter talet står bara bocklistan eller stödorden kvar på tavlan
-                  const structured = !!item.checks || !!item.points;
                   return (
                     <EddaSays
                       key={idx}
@@ -933,7 +946,7 @@ export default function CompleteWhiteboardSystem() {
                         ) : null
                       }
                     >
-                      {(!structured || !item.spoken) && <p>{item.text}</p>}
+                      {item.text && <p>{item.text}</p>}
                       {item.checks && (
                         <ul className="space-y-1.5">
                           {item.checks.map((c) => (
@@ -977,15 +990,18 @@ export default function CompleteWhiteboardSystem() {
                   );
                 })}
 
-                {/* MODELLERING: Edda berättar först, sedan visas det hon sa */}
+                {/* MODELLERING: Edda berättar, sedan står bara stödordet kvar */}
                 {task.kind === "think_aloud" &&
                   (eddaSpeaking ? (
-                    <EddaSays label="Edda berättar">
-                      <TalkingDots />
-                    </EddaSays>
+                    <EddaTalking />
                   ) : thoughtIndex < 0 ? (
                     <>
-                      <EddaSays>{task.intro}</EddaSays>
+                      {partInfo && (
+                        <EddaSays>
+                          <p className="font-bold">Målet</p>
+                          <p>{partInfo.goal}</p>
+                        </EddaSays>
+                      )}
                       <button onClick={handleNextThought} className={PRIMARY}>
                         Visa hur du tänker
                       </button>
@@ -997,7 +1013,6 @@ export default function CompleteWhiteboardSystem() {
                           <span className="text-[#5B46D6]">{thoughtIndex + 1}.</span>{" "}
                           {task.thoughts[thoughtIndex].label}
                         </p>
-                        <p>{task.thoughts[thoughtIndex].text}</p>
                       </EddaSays>
                       <button onClick={handleNextThought} className={PRIMARY}>
                         {thoughtIndex === task.thoughts.length - 1
@@ -1007,19 +1022,16 @@ export default function CompleteWhiteboardSystem() {
                     </>
                   ) : (
                     <>
-                      <ol className="space-y-1">
-                        {task.thoughts.map((t, i) => (
-                          <li key={i} className="font-whiteboard text-xl text-zinc-500">
-                            {i + 1}. {t.label}
-                          </li>
-                        ))}
-                      </ol>
-                      <div className="rounded-2xl border-2 border-[#C9C2EE] bg-[#F7F6FD] px-5 py-4 space-y-1">
-                        <p className="font-whiteboard text-lg uppercase tracking-wide text-[#5B46D6]">
-                          Slutsats
-                        </p>
-                        <p className={BODY}>{task.summary}</p>
-                      </div>
+                      <EddaSays>
+                        <p className="font-bold">Så här gjorde jag</p>
+                        <ol>
+                          {task.thoughts.map((t, i) => (
+                            <li key={i}>
+                              <span className="font-bold text-[#5B46D6]">{i + 1}.</span> {t.label}
+                            </li>
+                          ))}
+                        </ol>
+                      </EddaSays>
                       <button onClick={handleProceedToNextStep} className={PRIMARY}>
                         Jag hänger med – visa ett bra exempel
                       </button>
@@ -1167,12 +1179,7 @@ export default function CompleteWhiteboardSystem() {
                         const passedCount = evs.filter((e) => e.passed).length;
                         return (
                           <EddaSays>
-                            Du klarade {passedCount} av {diagSteps.length} frågor helt utan stöd på
-                            en lång text. Under lektionen nådde du textnivå {adaptState.level} av
-                            3.{" "}
-                            {passedCount >= 4
-                              ? "Nästa gång börjar vi på en högre nivå!"
-                              : "Nästa gång tränar vi mer på det som står under Nästa steg."}
+                            Du klarade {passedCount} av {diagSteps.length} frågor helt utan stöd.
                           </EddaSays>
                         );
                       })()}
@@ -1319,11 +1326,32 @@ function TalkingDots() {
       {[0, 150, 300].map((delay) => (
         <span
           key={delay}
-          className="h-2.5 w-2.5 rounded-full bg-[#8B7ADB] animate-bounce"
+          className="h-2.5 w-2.5 rounded-full bg-[#8B7ADB] animate-pulse"
           style={{ animationDelay: `${delay}ms` }}
         />
       ))}
     </span>
+  );
+}
+
+/** Edda pratar och eleven lyssnar: bara figuren och tre pulserande prickar. */
+function EddaTalking() {
+  return (
+    <div className="flex items-end gap-3 sm:gap-4">
+      <div
+        aria-hidden
+        className="flex h-14 w-14 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#7B66DC] to-[#5B46C8] shadow-[0_8px_18px_rgba(91,70,200,0.3)]"
+      >
+        <span className="h-3 w-1.5 rounded-full bg-white" />
+        <span className="h-3 w-1.5 rounded-full bg-white" />
+      </div>
+      <div>
+        <p className="mb-1.5 pl-4 text-base font-bold text-[#5B46D6]">Edda berättar</p>
+        <div className="inline-flex rounded-full border-2 border-[#C9C2EE] bg-white px-6 py-2.5">
+          <TalkingDots />
+        </div>
+      </div>
+    </div>
   );
 }
 
