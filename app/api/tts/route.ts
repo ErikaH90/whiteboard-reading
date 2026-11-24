@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+/** Eddas röst hos ElevenLabs. ELEVENLABS_VOICE_ID i miljön går före, om den är satt. */
+const VOICE_ID = "HqmZnnvy6tCQd8EGWKRT";
+
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
@@ -19,8 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Standardröst: Sarah (flerspråkig och tydlig på svenska) eller ditt eget röst-ID
-    const voiceId =
-      process.env.ELEVENLABS_VOICE_ID?.trim() || "EXAVITQu4vr4xnSDxMaL";
+    const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim() || VOICE_ID;
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
