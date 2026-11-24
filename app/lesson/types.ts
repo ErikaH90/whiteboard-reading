@@ -58,7 +58,10 @@ export type OptionId = "A" | "B" | "C";
 export type ChoiceTask = {
   kind: "choice";
   category: QuestionCategory;
+  /** Den korta frågan som står på tavlan. */
   prompt: string;
+  /** Det Edda säger innan frågan visas, om uppgiften behöver förklaras. */
+  say?: string;
   options: { id: OptionId; text: string; isCorrect: boolean }[];
   correctFeedback: string;
   incorrectFeedback: string;

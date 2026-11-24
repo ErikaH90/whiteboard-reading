@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { Brain, Check, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { Check, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import {
   CATEGORY_LABELS,
   INTERESTS,
@@ -61,7 +61,29 @@ type BoardEntry = {
 };
 
 /** Det Edda pekar på i lästexten: grönt för det eleven träffade, gult för det hon visar. */
-type Marks = { phrases: string[]; good: boolean };
+type Marks = { phrases: string[]; good: boolean; paragraph?: number };
+
+/** Ordet eleven har klickat på, och Eddas förklaring av det. */
+type WordNote = {
+  paragraph: number;
+  start: number;
+  end: number;
+  word: string;
+  status: "loading" | "speaking" | "done" | "error";
+  meaning: string;
+};
+
+type WordClick = (start: number, end: number, word: string) => void;
+
+const WORD = /[\p{L}\p{N}]+(?:[-'’:][\p{L}\p{N}]+)*/gu;
+
+/** Meningen som ordet står i, så att Edda kan förklara ordet i sitt sammanhang. */
+function sentenceAround(text: string, start: number, end: number): string {
+  const before = text.slice(0, start);
+  const from = Math.max(before.lastIndexOf(". "), before.lastIndexOf("! "), before.lastIndexOf("? ")) + 1;
+  const rest = text.slice(end).search(/[.!?](\s|$)/);
+  return text.slice(from, rest === -1 ? text.length : end + rest + 1).trim();
+}
 const NO_MARKS: Marks = { phrases: [], good: false };
 
 /** Mellan försöken rensas tavlan: bara själva frågan står kvar. */
@@ -101,7 +123,44 @@ const CYCLE: Phase[] = ["modellering", "traning", "aterkallning"];
  * är starkt gul, tidigare fraser är nedtonade så att blicken dras rätt. Det eleven
  * själv träffade i sitt svar (`good`) är grönt.
  */
-function renderHighlighted(text: string, earlier: string[], current: string[], good: string[]) {
+function Highlighted({
+  text,
+  earlier,
+  current,
+  good,
+  picked,
+  onWord,
+}: {
+  text: string;
+  earlier: string[];
+  current: string[];
+  good: string[];
+  picked?: { start: number; end: number } | null;
+  onWord?: WordClick;
+}) {
+  /** Varje ord går att klicka på när Edda får förklara. */
+  const words = (chunk: string, offset: number): React.ReactNode => {
+    if (!onWord) return chunk;
+    const parts: React.ReactNode[] = [];
+    let last = 0;
+    for (const m of chunk.matchAll(WORD)) {
+      const at = m.index;
+      if (at > last) parts.push(chunk.slice(last, at));
+      parts.push(
+        <span
+          key={at}
+          onClick={() => onWord(offset + at, offset + at + m[0].length, m[0])}
+          className="cursor-pointer rounded-sm hover:bg-[#FEF9C3]"
+        >
+          {m[0]}
+        </span>,
+      );
+      last = at + m[0].length;
+    }
+    if (last < chunk.length) parts.push(chunk.slice(last));
+    return parts;
+  };
+
   const levels = new Array<number>(text.length).fill(0);
   const paint = (phrases: string[], level: number) => {
     for (const phrase of phrases) {
@@ -114,6 +173,7 @@ function renderHighlighted(text: string, earlier: string[], current: string[], g
   paint(earlier, 1);
   paint(current, 2);
   paint(good, 3);
+  if (picked) levels.fill(2, picked.start, picked.end);
 
   const out: React.ReactNode[] = [];
   for (let start = 0; start < text.length; ) {
@@ -122,7 +182,7 @@ function renderHighlighted(text: string, earlier: string[], current: string[], g
     const chunk = text.slice(start, end);
     out.push(
       levels[start] === 0 ? (
-        <Fragment key={start}>{chunk}</Fragment>
+        <Fragment key={start}>{words(chunk, start)}</Fragment>
       ) : (
         <mark
           key={start}
@@ -135,7 +195,7 @@ function renderHighlighted(text: string, earlier: string[], current: string[], g
                 : "bg-[#FEF9C3] rounded-sm text-inherit"
           }
         >
-          {chunk}
+          {words(chunk, start)}
         </mark>
       ),
     );
@@ -172,6 +232,8 @@ export default function CompleteWhiteboardSystem() {
   const supportFree = isSupportFree(step.phase);
   // I träningen kommer hjälpen av sig själv efter ett fel
   const helpAllowed = step.phase === "traning";
+  // Edda förklarar ord så länge eleven får ha stöd
+  const wordHelp = step.phase === "modellering" || step.phase === "traning";
 
   // Adaptiv textnivå
   const [adaptState, setAdaptState] = useState<AdaptState>(START_ADAPT);
@@ -179,15 +241,16 @@ export default function CompleteWhiteboardSystem() {
   const lastLeveledLevelRef = useRef<Level | null>(null);
   const stepLevel: Level =
     step.leveled && step.textKey ? (textLevels[step.textKey] ?? adaptState.level) : 1;
+  const paragraphs = step.text ? paragraphsFor(step.text, stepLevel) : [];
 
-  // Tavlans tillstånd
+  // Rutans tillstånd
   const [boardStage, setBoardStage] = useState<
     "listening_blank" | "active_task" | "showing_feedback"
   >("active_task");
   const [boardHistory, setBoardHistory] = useState<BoardEntry[]>(() =>
     step.task.kind === "interest" ? [{ sender: "teacher", text: step.task.prompt }] : [],
   );
-  const boardEndRef = useRef<HTMLDivElement | null>(null);
+  const popupRef = useRef<HTMLElement | null>(null);
 
   // Per-steg-tillstånd
   const [selectedOption, setSelectedOption] = useState<OptionId | null>(null);
@@ -195,6 +258,10 @@ export default function CompleteWhiteboardSystem() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marks, setMarks] = useState<Marks>(NO_MARKS);
   const [attempts, setAttempts] = useState(0);
+  // Ordet som Edda förklarar just nu, mitt i lästexten
+  const [wordNote, setWordNote] = useState<WordNote | null>(null);
+  const wordTokenRef = useRef(0);
+  const wordCacheRef = useRef(new Map<string, string>());
   // Alternativ som eleven redan har provat i träningen
   const [triedOptions, setTriedOptions] = useState<OptionId[]>([]);
   // -1 = Eddas inledning, 0..n-1 = en tanke i taget, n = slutsatsen
@@ -328,17 +395,10 @@ export default function CompleteWhiteboardSystem() {
     if (boardStage === "active_task") startTimeRef.current = performance.now();
   }, [boardStage, stepIndex]);
 
-  // Håll den aktuella gulmarkeringen synlig i lästexten
+  // Håll Eddas ruta, och stället i texten hon pekar på, inom synhåll
   useEffect(() => {
-    readingRef.current
-      ?.querySelector("mark[data-current]")
-      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [stepIndex, thoughtIndex, marks, boardStage]);
-
-  // Scrolla tavlan till senaste raden
-  useEffect(() => {
-    boardEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [boardHistory, thoughtIndex, boardStage]);
+    popupRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [stepIndex, thoughtIndex, marks, boardStage, boardHistory]);
 
   // ==========================================================================
   // Stegnavigering
@@ -361,6 +421,8 @@ export default function CompleteWhiteboardSystem() {
     setFreeText("");
     setMarks(NO_MARKS);
     setAttempts(0);
+    wordTokenRef.current++;
+    setWordNote(null);
     setTriedOptions([]);
     setThoughtIndex(-1);
     setSelectedCategory(null);
@@ -417,6 +479,8 @@ export default function CompleteWhiteboardSystem() {
       if (autoRead) playText(plainText(next.text, level), () => activateBoard(next, true));
     } else {
       activateBoard(next, false);
+      // Edda säger uppgiften först. Sedan visas bara frågan och svaren.
+      if (audioUnlocked && next.task.kind === "choice" && next.task.say) eddaSpeak(next.task.say);
     }
   }
 
@@ -486,7 +550,7 @@ export default function CompleteWhiteboardSystem() {
     setAudioUnlocked(true);
     // Valet är ett klick, så ljudet får starta här
     eddaSpeak(
-      `Toppen! Jag väljer texter om ${choice.label.toLowerCase()}. Vi börjar med korta texter, och jag gör dem längre i takt med att du blir säkrare. Målet är att du ska klara en lång text som på nationella provet.`,
+      `Toppen! Jag väljer texter om ${choice.label.toLowerCase()}. Vi börjar med korta texter, och jag gör dem längre i takt med att du blir säkrare. Målet är att du ska klara en lång text som på nationella provet. Klicka på ett ord i texten om du vill att jag förklarar det.`,
     );
     setBoardHistory((prev) => [
       ...prev,
@@ -516,6 +580,84 @@ export default function CompleteWhiteboardSystem() {
     const speak = audioUnlocked && !!say;
     if (speak) eddaSpeak(say);
     return { sender: "teacher", spoken: speak, ...entry };
+  }
+
+  /**
+   * Eleven klickar på ett ord: det blir gult, Edda säger vad det betyder
+   * och förklaringen står sedan kvar under stycket.
+   */
+  async function handleWordClick(paragraph: number, start: number, end: number, word: string) {
+    if (!wordHelp || !step.text || isPlayingAudio || isSubmitting) return;
+    const token = ++wordTokenRef.current;
+    const note = { paragraph, start, end, word };
+    const sentence = sentenceAround(paragraphs[paragraph] ?? "", start, end);
+    const key = `${word.toLowerCase()}|${sentence}`;
+
+    const lower = word.toLowerCase();
+    let meaning =
+      step.text.glossary?.find((g) => lower.startsWith(g.term.toLowerCase()))?.meaning ??
+      wordCacheRef.current.get(key);
+
+    if (!meaning) {
+      setWordNote({ ...note, status: "loading", meaning: "" });
+      try {
+        const res = await fetch("/api/explain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "word", word, sentence }),
+        });
+        const data = await res.json();
+        if (typeof data.meaning === "string" && data.meaning) meaning = data.meaning as string;
+      } catch {
+        // visas som fel nedan
+      }
+      if (token !== wordTokenRef.current) return; // eleven har klickat på något annat
+      if (!meaning) {
+        setWordNote({ ...note, status: "error", meaning: "" });
+        return;
+      }
+      wordCacheRef.current.set(key, meaning);
+    }
+
+    const done: WordNote = { ...note, status: "done", meaning };
+    if (!audioUnlocked) {
+      setWordNote(done);
+      return;
+    }
+    // Edda säger förklaringen först. Sedan står den i text.
+    setEddaTalking(false);
+    setWordNote({ ...done, status: "speaking" });
+    playText(`${word}. Det betyder ${meaning}.`, () => {
+      if (token === wordTokenRef.current) setWordNote(done);
+    });
+  }
+
+  /** Edda tolkar ett stycke åt en elev som har fastnat i sitt resonemang. */
+  async function explainParagraph(
+    question: string,
+    answer: string,
+    highlight?: string,
+  ): Promise<{ index: number; say: string; short: string } | null> {
+    const body = paragraphs.filter((p) => p !== step.text?.signature);
+    const at = highlight ? body.findIndex((p) => p.includes(highlight)) : -1;
+    try {
+      const res = await fetch("/api/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "paragraph",
+          paragraphs: body,
+          question,
+          studentAnswer: answer,
+          index: at === -1 ? undefined : at,
+        }),
+      });
+      const data = await res.json();
+      if (typeof data.index !== "number" || !data.say || !data.short) return null;
+      return data;
+    } catch {
+      return null;
+    }
   }
 
   /** Omvisning: Edda säger hur hon tänker och pekar ut ställena i texten. */
@@ -637,7 +779,16 @@ export default function CompleteWhiteboardSystem() {
     }
 
     setIsSubmitting(true);
-    const ev = await evaluate(step, val, stepLevel);
+    wordTokenRef.current++;
+    setWordNote(null);
+    // Styckestolkningen hämtas samtidigt som bedömningen, men används bara
+    // om eleven har fastnat: första försöket att resonera räckte inte.
+    const mayExplain =
+      helpAllowed && attempts === 0 && task.category === "resonera" && !!step.text;
+    const [ev, interpretation] = await Promise.all([
+      evaluate(step, val, stepLevel),
+      mayExplain ? explainParagraph(task.prompt, val, task.hint?.highlight) : null,
+    ]);
     const passed = ev?.passed ?? true;
 
     const labels = criteriaFor(task);
@@ -672,8 +823,15 @@ export default function CompleteWhiteboardSystem() {
     // pekar i texten, och eleven förbättrar sitt svar direkt i rutan.
     if (!passed && helpAllowed && attempts === 0) {
       setAttempts(1);
-      setMarks(pointAt);
-      const reply = eddaReply(feedback, say);
+      // Har eleven fastnat i resonemanget tolkar Edda stycket som ger stöd
+      const stuck = ev ? interpretation : null;
+      setMarks(stuck ? { ...pointAt, paragraph: stuck.index } : pointAt);
+      const reply = stuck
+        ? eddaReply(
+            { ...feedback, text: `Det gula stycket: ${stuck.short}` },
+            `${say} Jag förklarar det gula stycket. ${stuck.say}`,
+          )
+        : eddaReply(feedback, say);
       setBoardHistory((prev) => [...promptOnly(prev), reply]);
       return;
     }
@@ -743,7 +901,15 @@ export default function CompleteWhiteboardSystem() {
   if (!supportFree || boardStage === "showing_feedback") {
     (marks.good ? goodHighlights : currentHighlights).push(...marks.phrases);
   }
-  // Under modelleringen berättar Edda själv; tavlan visar bara det hon just har sagt.
+  const paragraphMark = !supportFree && !marks.good ? marks.paragraph : undefined;
+  // Eddas ruta sitter vid stycket hon pekar på. Pekar hon inte på något
+  // särskilt står rutan bredvid texten (under den på små skärmar).
+  const findParagraph = (phrases: string[]) =>
+    paragraphs.findIndex((p) => phrases.some((ph) => ph && p.includes(ph)));
+  let anchor = paragraphMark ?? findParagraph(currentHighlights);
+  if (anchor < 0) anchor = findParagraph(goodHighlights);
+  if (anchor < 0) anchor = findParagraph(earlierHighlights.slice(-1));
+  // Under modelleringen berättar Edda själv; rutan visar bara det hon just har sagt.
   const showHistory = task.kind !== "think_aloud";
   const eddaSpeaking = eddaTalking && isPlayingAudio;
 
@@ -755,7 +921,7 @@ export default function CompleteWhiteboardSystem() {
         onSelect={(c) => setSelectedCategory(c === selectedCategory ? null : c)}
       />
       <ReadingMapLegend />
-      <p className="font-whiteboard text-lg text-zinc-500 text-center">
+      <p className="text-lg text-zinc-500 text-center">
         Grön betyder redo. Klicka på en del om du vill ha tips av Edda.
       </p>
       {selectedCategory && (
@@ -771,14 +937,6 @@ export default function CompleteWhiteboardSystem() {
       )}
     </div>
   );
-  const footerTip = supportFree
-    ? "Utan stöd: ingen uppläsning, inga markeringar och inga ledtrådar."
-    : null;
-
-  const paragraphs = step.text ? paragraphsFor(step.text, stepLevel) : [];
-  const showGlossary =
-    !!step.text?.glossary && step.leveled && stepLevel === 1 && !supportFree;
-
   const diagSteps = steps.filter((s) => s.phase === "diagnos");
   const diagPending = diagSteps.some(
     (s) => !diagResults[s.id] || diagResults[s.id] === "pending",
@@ -796,81 +954,20 @@ export default function CompleteWhiteboardSystem() {
   // Rendering
   // ==========================================================================
 
-  return (
-    <main className="min-h-screen lg:h-screen bg-[#F3F4F8] flex flex-col select-none antialiased text-zinc-900">
-      {/* Handskrivet typsnitt (Patrick Hand) */}
-      <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap");
-        .font-whiteboard {
-          font-family: "Patrick Hand", cursive, sans-serif;
-        }
-      `}</style>
-
-      {/* SIDHUVUD: titel, del och progression */}
-      <header className="bg-white px-4 sm:px-8 lg:px-12 py-4 flex flex-wrap items-center gap-x-10 gap-y-3">
-        <div className="shrink-0">
-          <h1 className="text-xl font-bold leading-tight text-zinc-900">Läsförståelse</h1>
-          <p className="text-sm text-zinc-500">
-            {step.part >= 1 ? `Del ${step.part} av ${TOTAL_PARTS} · ${chapterTitle}` : "Start"}
-          </p>
-        </div>
-        <div
-          className="flex flex-1 min-w-[200px] items-center gap-2"
-          role="progressbar"
-          aria-label="Delar i lektionen"
-          aria-valuemin={0}
-          aria-valuemax={TOTAL_PARTS}
-          aria-valuenow={step.part}
-        >
-          {Array.from({ length: TOTAL_PARTS }, (_, i) => i + 1).map((n) => (
-            <span
-              key={n}
-              className={`h-2 flex-1 rounded-full transition-colors ${
-                n < step.part
-                  ? "bg-[#3B62E3]"
-                  : n === step.part
-                    ? "bg-white ring-2 ring-inset ring-[#3B62E3]"
-                    : "bg-[#CDD3E0]"
-              }`}
-            />
-          ))}
-        </div>
-        <div className="flex shrink-0 items-center gap-5">
-          <ReadingMapChart map={readingMap} mini />
-          <button
-            onClick={toggleSound}
-            aria-pressed={audioUnlocked}
-            className="rounded-xl border border-[#C5CEF0] bg-[#EEF1FB] px-4 py-2 text-sm font-bold text-[#3B62E3] transition hover:bg-[#E0E6FA]"
-          >
-            {audioUnlocked ? "Ljud på" : "Ljud av"}
-          </button>
-        </div>
-      </header>
-
-      <div
-        className={`flex-1 min-h-0 grid grid-cols-1 gap-6 p-4 sm:p-6 lg:px-12 lg:py-7 ${
-          task.kind === "map" ? "" : "lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
-        }`}
-      >
-        {/* ================================================================== */}
-        {/* VÄNSTER: WHITEBOARDEN                                               */}
-        {/* ================================================================== */}
-        <section className="relative bg-white rounded-[2.25rem] border-[14px] border-[#373C4B] shadow-xl flex flex-col min-h-[560px] lg:min-h-0 overflow-hidden">
-          <div className="absolute -top-px -left-px w-4 h-4 bg-zinc-950 rounded-br-lg pointer-events-none" />
-          <div className="absolute -top-px -right-px w-4 h-4 bg-zinc-950 rounded-bl-lg pointer-events-none" />
-          <div className="absolute -bottom-px -left-px w-4 h-4 bg-zinc-950 rounded-tr-lg pointer-events-none" />
-          <div className="absolute -bottom-px -right-px w-4 h-4 bg-zinc-950 rounded-tl-lg pointer-events-none" />
-
-          <div className="flex-1 overflow-y-auto px-6 py-7 sm:px-9 sm:py-8 space-y-5">
+  // Allt Edda säger och frågar. Visas i en liten ruta intill texten.
+  const panel = (
+    <>
             {/* Var eleven befinner sig */}
-            <p className="font-whiteboard text-base uppercase tracking-wide text-[#5B46D6]">
-              {eyebrow}
-            </p>
+            {!eddaSpeaking && (
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#5B46D6]">
+                {eyebrow}
+              </p>
+            )}
 
-            {/* Tavlan är nästan tom medan texten läses */}
+            {/* Rutan är nästan tom medan texten läses */}
             {boardStage === "listening_blank" && (
-              <div className="space-y-5">
-                <h2 className="font-whiteboard text-4xl text-[#5B46D6]">
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-zinc-900">
                   {supportFree || step.phase === "diktamen" || (audioUnlocked && !isPlayingAudio)
                     ? "Läs texten"
                     : "Lyssna nu"}
@@ -879,15 +976,15 @@ export default function CompleteWhiteboardSystem() {
                   <>
                     <p className={BODY}>
                       {step.phase === "diktamen"
-                        ? "Läs texten till höger tyst först."
-                        : "Läs texten till höger själv."}
+                        ? "Läs texten tyst först."
+                        : "Läs texten själv."}
                     </p>
                     <button onClick={revealBoardNow} className={PRIMARY}>
                       Jag har läst klart
                     </button>
                   </>
                 ) : !audioUnlocked ? (
-                  <div className="flex flex-col items-start gap-4">
+                  <div className="flex flex-col items-start gap-3">
                     <button onClick={handleStartAndListen} className={PRIMARY}>
                       Lyssna på texten
                     </button>
@@ -904,18 +1001,24 @@ export default function CompleteWhiteboardSystem() {
             )}
 
             {/* Uppgift, svar och återkoppling */}
-            {boardStage !== "listening_blank" && (
-              <div className="space-y-5">
-                <h2 className="font-whiteboard text-4xl text-[#5B46D6]">
-                  {phaseHeading(step)}
-                </h2>
+            {/* Medan Edda pratar syns bara hon och prickarna. Eleven lyssnar. */}
+            {boardStage !== "listening_blank" && eddaSpeaking && <EddaTalking />}
+
+            {boardStage !== "listening_blank" && !eddaSpeaking && (
+              <div className="space-y-4">
+                {/* Rubrik för steget */}
+                {!eddaSpeaking && (
+                  <h2 className="text-lg font-bold text-zinc-900">
+                    {phaseHeading(step)}
+                  </h2>
+                )}
 
                 {(showHistory ? boardHistory : []).map((item, idx) => {
                   if (item.sender === "student") {
                     return (
                       <div key={idx} className="space-y-1.5">
-                        <p className="font-whiteboard text-base text-zinc-500">Ditt svar</p>
-                        <p className="font-whiteboard text-xl text-zinc-700 whitespace-pre-line rounded-2xl border-2 border-zinc-300 px-5 py-3">
+                        <p className="text-sm text-zinc-500">Ditt svar</p>
+                        <p className="text-[15px] leading-snug text-zinc-700 whitespace-pre-line rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
                           {item.text}
                         </p>
                       </div>
@@ -952,7 +1055,7 @@ export default function CompleteWhiteboardSystem() {
                           {item.checks.map((c) => (
                             <li
                               key={c.label}
-                              className="font-whiteboard flex items-center gap-3 text-xl"
+                              className="flex items-center gap-2.5 text-[15px]"
                             >
                               {c.met ? (
                                 <CorrectMark small />
@@ -973,7 +1076,7 @@ export default function CompleteWhiteboardSystem() {
                       {item.points && (
                         <ol className="space-y-1.5">
                           {item.points.map((point, i) => (
-                            <li key={point.label} className="font-whiteboard text-xl">
+                            <li key={point.label} className="text-[15px]">
                               <span className="font-bold text-[#5B46D6]">{i + 1}.</span>{" "}
                               {point.highlight ? (
                                 <mark className="rounded-sm bg-[#FDE047] px-1 text-zinc-950">
@@ -1058,7 +1161,7 @@ export default function CompleteWhiteboardSystem() {
                 {task.kind === "choice" &&
                   selectedOption === null &&
                   boardStage === "active_task" && (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {task.options.map((opt) => (
                         <button
                           key={opt.id}
@@ -1075,9 +1178,9 @@ export default function CompleteWhiteboardSystem() {
 
                 {/* FRITEXT */}
                 {boardStage === "active_task" && task.kind === "free" && (
-                  <form onSubmit={handleFreeTextSubmit} className="space-y-4">
+                  <form onSubmit={handleFreeTextSubmit} className="space-y-3">
                     <label className="block space-y-2">
-                      <span className="font-whiteboard text-base text-zinc-500">
+                      <span className="text-sm text-zinc-500">
                         {supportFree
                           ? "Ditt svar, utan ledtråd"
                           : attempts > 0
@@ -1093,7 +1196,7 @@ export default function CompleteWhiteboardSystem() {
                         rows={4}
                         placeholder={(!supportFree && task.placeholder) || "Skriv ditt svar här..."}
                         disabled={isSubmitting}
-                        className="font-whiteboard block w-full rounded-2xl border-2 border-zinc-600 bg-white px-5 py-3 text-xl text-zinc-800 outline-none placeholder:text-zinc-400 focus:border-[#3B62E3] select-text"
+                        className="block w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2.5 text-base text-zinc-800 outline-none placeholder:text-zinc-400 focus:border-[#3B62E3] select-text"
                       />
                     </label>
                     <button
@@ -1112,13 +1215,13 @@ export default function CompleteWhiteboardSystem() {
                     <button
                       onClick={handleDictationToggle}
                       aria-label={isRecording ? "Avsluta högläsning" : "Starta högläsning"}
-                      className={`h-16 w-16 shrink-0 rounded-full flex items-center justify-center text-white transition shadow-lg ${
+                      className={`h-12 w-12 shrink-0 rounded-full flex items-center justify-center text-white transition shadow-lg ${
                         isRecording ? "bg-red-600 animate-pulse" : "bg-[#3B62E3] hover:bg-[#2F52C9]"
                       }`}
                     >
-                      {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
+                      {isRecording ? <MicOff size={22} /> : <Mic size={22} />}
                     </button>
-                    <span className="font-whiteboard text-xl text-zinc-500">
+                    <span className="text-[15px] text-zinc-500">
                       {isRecording
                         ? "Spelar in högläsning... Klicka igen när du är klar."
                         : "Klicka för att starta högläsning"}
@@ -1155,17 +1258,17 @@ export default function CompleteWhiteboardSystem() {
                             className="rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-3"
                           >
                             <p
-                              className={`font-whiteboard text-xl ${
+                              className={`text-base font-semibold ${
                                 ev?.passed ? "text-emerald-800" : "text-amber-800"
                               }`}
                             >
                               {ev ? (ev.passed ? "✓" : "→") : "•"} {CATEGORY_LABELS[cat]}
                             </p>
-                            <p className="font-whiteboard text-lg text-zinc-600">
+                            <p className="text-[15px] text-zinc-600">
                               {ev ? ev.boardFeedback : "Kunde inte rättas automatiskt."}
                             </p>
                             {ev && !ev.passed && ev.nextStep && (
-                              <p className="font-whiteboard text-lg text-zinc-600">
+                              <p className="text-[15px] text-zinc-600">
                                 Nästa steg: {ev.nextStep}
                               </p>
                             )}
@@ -1193,90 +1296,148 @@ export default function CompleteWhiteboardSystem() {
                   </button>
                 )}
                 {isLastStep && !diagPending && (
-                  <p className="font-whiteboard inline-flex items-center gap-2 text-xl text-emerald-700">
+                  <p className="inline-flex items-center gap-2 text-base text-emerald-700">
                     <Check size={18} />
                     <span>Alla steg genomförda!</span>
                   </p>
                 )}
               </div>
             )}
-            <div ref={boardEndRef} />
-          </div>
-        </section>
+    </>
+  );
 
-        {/* ================================================================== */}
-        {/* HÖGER: LÄSTEXT                                                      */}
-        {/* ================================================================== */}
-        <section className="flex flex-col rounded-[1.75rem] bg-white border border-zinc-200 px-7 py-7 sm:px-10 min-h-[480px] lg:min-h-0">
-          <div className="flex-1 min-h-0 flex flex-col">
-            {step.text ? (
-              <>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    {step.text.source || "Lästext"}
-                  </span>
-                  {!supportFree && (
-                    <button
-                      onClick={toggleReadAloud}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        isPlayingAudio
-                          ? "bg-red-50 text-red-600"
-                          : "bg-[#EEF1FB] text-[#3B62E3] hover:bg-[#E0E6FA]"
-                      }`}
-                    >
-                      {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                      <span>{isPlayingAudio ? "Pausa" : "Lyssna"}</span>
-                    </button>
-                  )}
-                </div>
+  return (
+    <main className="min-h-screen bg-white flex flex-col select-none antialiased text-zinc-900">
 
-                <div className="overflow-y-auto pr-1 min-h-0 font-serif">
-                  <h3 className="text-2xl text-zinc-800 mb-4">{step.text.title}</h3>
-                  <div
-                    ref={readingRef}
-                    className="text-base sm:text-[17px] leading-[1.75] text-zinc-600 space-y-4 select-text"
+      {/* SIDHUVUD: titel, del och progression */}
+      <header className="border-b border-zinc-100 bg-white px-4 sm:px-8 lg:px-12 py-4 flex flex-wrap items-center gap-x-10 gap-y-3">
+        <div className="shrink-0">
+          <h1 className="text-xl font-bold leading-tight text-zinc-900">Läsförståelse</h1>
+          <p className="text-sm text-zinc-500">
+            {step.part >= 1 ? `Del ${step.part} av ${TOTAL_PARTS} · ${chapterTitle}` : "Start"}
+          </p>
+        </div>
+        <div
+          className="flex flex-1 min-w-[200px] items-center gap-2"
+          role="progressbar"
+          aria-label="Delar i lektionen"
+          aria-valuemin={0}
+          aria-valuemax={TOTAL_PARTS}
+          aria-valuenow={step.part}
+        >
+          {Array.from({ length: TOTAL_PARTS }, (_, i) => i + 1).map((n) => (
+            <span
+              key={n}
+              className={`h-2 flex-1 rounded-full transition-colors ${
+                n < step.part
+                  ? "bg-[#3B62E3]"
+                  : n === step.part
+                    ? "bg-white ring-2 ring-inset ring-[#3B62E3]"
+                    : "bg-[#CDD3E0]"
+              }`}
+            />
+          ))}
+        </div>
+        <div className="flex shrink-0 items-center gap-5">
+          <ReadingMapChart map={readingMap} mini />
+          <button
+            onClick={toggleSound}
+            aria-pressed={audioUnlocked}
+            className="rounded-xl border border-[#C5CEF0] bg-[#EEF1FB] px-4 py-2 text-sm font-bold text-[#3B62E3] transition hover:bg-[#E0E6FA]"
+          >
+            {audioUnlocked ? "Ljud på" : "Ljud av"}
+          </button>
+        </div>
+      </header>
+
+      <div className="flex-1 px-5 pb-24 pt-8 sm:px-8 lg:pt-12">
+        {step.text ? (
+          <article className="mx-auto max-w-[1060px] lg:grid lg:grid-cols-[640px_380px] lg:items-start lg:gap-x-10">
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  {step.text.source || "Lästext"}
+                </span>
+                {!supportFree && (
+                  <button
+                    onClick={toggleReadAloud}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      isPlayingAudio
+                        ? "bg-red-50 text-red-600"
+                        : "bg-[#EEF1FB] text-[#3B62E3] hover:bg-[#E0E6FA]"
+                    }`}
                   >
-                    {paragraphs.map((p, i) => (
-                      <p
-                        key={i}
-                        className={p === step.text?.signature ? "text-right italic text-sm" : ""}
-                      >
-                        {renderHighlighted(p, earlierHighlights, currentHighlights, goodHighlights)}
-                      </p>
-                    ))}
-                  </div>
-
-                  {showGlossary && (
-                    <div className="mt-6 rounded-2xl bg-zinc-50 border border-zinc-200 px-5 py-4 font-sans">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
-                        Ord att känna till
-                      </p>
-                      <ul className="space-y-1 text-sm text-zinc-700">
-                        {step.text.glossary!.map((g) => (
-                          <li key={g.term}>
-                            <span className="font-semibold">{g.term}</span>: {g.meaning}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : step.phase === "aterkallning" || step.phase === "repetition" ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 text-zinc-400">
-                <Brain size={36} />
-                <p className="text-base font-semibold text-zinc-600">Inget textstöd</p>
-                <p className="text-sm max-w-xs">
-                  Nu befäster du det du har lärt dig genom att svara helt ur minnet.
-                </p>
+                    {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                    <span>{isPlayingAudio ? "Pausa" : "Lyssna"}</span>
+                  </button>
+                )}
               </div>
-            ) : (
-              <LessonOverview currentPart={step.part} />
-            )}
-          </div>
 
-          {footerTip && <p className="pt-4 text-xs text-zinc-400">{footerTip}</p>}
-        </section>
+              <h2 className="mb-6 font-serif text-3xl leading-tight text-zinc-900 sm:text-4xl">
+                {step.text.title}
+              </h2>
+              <div
+                ref={readingRef}
+                className="space-y-5 font-serif text-lg leading-[1.8] text-zinc-800 select-text sm:text-[19px]"
+              >
+                {paragraphs.map((p, i) => (
+                  <div key={i} className="relative">
+                    <p
+                      data-current={paragraphMark === i ? "" : undefined}
+                      className={
+                        p === step.text?.signature
+                          ? "text-right text-base italic"
+                          : paragraphMark === i
+                            ? "-mx-3 rounded-xl bg-[#FEF9C3] px-3 py-2"
+                            : ""
+                      }
+                    >
+                      <Highlighted
+                        text={p}
+                        earlier={earlierHighlights}
+                        current={currentHighlights}
+                        good={goodHighlights}
+                        picked={wordNote?.paragraph === i ? wordNote : null}
+                        onWord={
+                          wordHelp
+                            ? (start, end, word) => handleWordClick(i, start, end, word)
+                            : undefined
+                        }
+                      />
+                    </p>
+                    {wordNote?.paragraph === i && (
+                      <WordExplanation note={wordNote} onClose={() => setWordNote(null)} />
+                    )}
+                    {/* Eddas ruta sitter intill det stycke hon pratar om */}
+                    {anchor === i && (
+                      <aside
+                        ref={popupRef}
+                        className={`${POPUP} relative mt-4 lg:absolute lg:left-full lg:top-0 lg:ml-10 lg:mt-0 lg:w-[380px]`}
+                      >
+                        <span
+                          aria-hidden
+                          className="absolute -left-[9px] top-7 hidden h-4 w-4 rotate-45 border-b border-l border-zinc-200 bg-white lg:block"
+                        />
+                        {panel}
+                      </aside>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {anchor < 0 && (
+              <aside ref={popupRef} className={`${POPUP} mt-8 lg:sticky lg:top-6 lg:mt-[88px]`}>
+                {panel}
+              </aside>
+            )}
+          </article>
+        ) : task.kind === "map" || task.kind === "result" ? (
+          <div className="mx-auto max-w-3xl space-y-4">{panel}</div>
+        ) : (
+          <section ref={popupRef} className={`${POPUP} mx-auto mt-6 max-w-xl`}>
+            {panel}
+          </section>
+        )}
       </div>
     </main>
   );
@@ -1289,12 +1450,15 @@ export default function CompleteWhiteboardSystem() {
 /** Del 1–4 plus slutdiagnosen. */
 const TOTAL_PARTS = PARTS.length + 1;
 
-const BODY = "font-whiteboard text-2xl sm:text-[1.7rem] leading-snug text-zinc-900";
+const BODY = "text-[17px] font-semibold leading-snug text-zinc-900";
 const PRIMARY =
-  "inline-flex items-center justify-center rounded-xl bg-[#3B62E3] px-6 py-3 text-base font-bold text-white transition hover:bg-[#2F52C9] disabled:opacity-40";
-const LINK = "font-whiteboard text-lg text-[#3F7FA6] transition hover:text-[#2C5F80]";
+  "inline-flex items-center justify-center rounded-xl bg-[#3B62E3] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#2F52C9] disabled:opacity-40";
+const LINK = "text-sm font-semibold text-[#3B62E3] transition hover:underline";
 const OPTION =
-  "font-whiteboard flex w-full items-start gap-3 rounded-2xl border-2 border-zinc-200 px-5 py-3 text-left text-xl sm:text-2xl text-zinc-900 transition hover:border-[#3B62E3] hover:bg-[#F5F7FE]";
+  "flex w-full items-start gap-2.5 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-left text-[15px] leading-snug text-zinc-900 transition hover:border-[#3B62E3] hover:bg-[#F5F7FE]";
+/** Eddas lilla ruta intill texten. */
+const POPUP =
+  "space-y-3 rounded-2xl border border-zinc-200 bg-white p-5 font-sans text-base leading-snug text-zinc-900 shadow-[0_12px_40px_rgba(40,40,80,0.12)] select-none";
 
 function phaseHeading(step: LessonStep): string {
   switch (step.phase) {
@@ -1303,7 +1467,7 @@ function phaseHeading(step: LessonStep): string {
     case "repetition":
       return "Börja med att återkalla";
     case "modellering":
-      return "Edda visar hur hon tänker";
+      return step.task.kind === "choice" ? "Ett bra exempel" : "Edda visar hur hon tänker";
     case "traning":
       return "Nu är det din tur";
     case "aterkallning":
@@ -1334,57 +1498,70 @@ function TalkingDots() {
   );
 }
 
-/** Edda pratar och eleven lyssnar: bara figuren och tre pulserande prickar. */
-function EddaTalking() {
+/** Eddas ordförklaring, direkt under stycket där ordet står. */
+function WordExplanation({ note, onClose }: { note: WordNote; onClose: () => void }) {
   return (
-    <div className="flex items-end gap-3 sm:gap-4">
-      <div
-        aria-hidden
-        className="flex h-14 w-14 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#7B66DC] to-[#5B46C8] shadow-[0_8px_18px_rgba(91,70,200,0.3)]"
-      >
-        <span className="h-3 w-1.5 rounded-full bg-white" />
-        <span className="h-3 w-1.5 rounded-full bg-white" />
-      </div>
-      <div>
-        <p className="mb-1.5 pl-4 text-base font-bold text-[#5B46D6]">Edda berättar</p>
-        <div className="inline-flex rounded-full border-2 border-[#C9C2EE] bg-white px-6 py-2.5">
-          <TalkingDots />
-        </div>
-      </div>
+    <div className="flex items-center gap-3 rounded-xl border-2 border-[#FDE047] bg-white px-4 py-2.5 font-sans text-base text-zinc-800">
+      {note.status === "loading" || note.status === "speaking" ? (
+        <TalkingDots />
+      ) : note.status === "error" ? (
+        <p className="flex-1">Jag kunde inte förklara ordet just nu. Prova igen.</p>
+      ) : (
+        <p className="flex-1">
+          <span className="font-semibold">{note.word}</span>: {note.meaning}
+        </p>
+      )}
+      {(note.status === "done" || note.status === "error") && (
+        <button
+          onClick={onClose}
+          aria-label="Stäng förklaringen"
+          className="shrink-0 rounded-full px-2 text-lg leading-none text-zinc-400 hover:text-zinc-700"
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }
 
-/** Edda: lila figur med pratbubbla. Används för allt hon säger till eleven. */
+/** Eddas figur i litet format. */
+function EddaFace() {
+  return (
+    <span
+      aria-hidden
+      className="flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-[#7B66DC] to-[#5B46C8]"
+    >
+      <span className="h-2 w-1 rounded-full bg-white" />
+      <span className="h-2 w-1 rounded-full bg-white" />
+    </span>
+  );
+}
+
+/** Edda pratar och eleven lyssnar: bara figuren och tre pulserande prickar. */
+function EddaTalking() {
+  return (
+    <div className="flex items-center gap-3">
+      <EddaFace />
+      <TalkingDots />
+    </div>
+  );
+}
+
+/** Det Edda säger till eleven: figuren och en kort text. */
 function EddaSays({
   children,
-  label = "Edda",
   badge = null,
 }: {
   children: React.ReactNode;
-  label?: string;
-  /** Tårtbit eller bock som visas till vänster i bubblan efter ett svar. */
+  /** Tårtbit eller bock som visas efter ett svar. */
   badge?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-end gap-3 sm:gap-4">
-      <div
-        aria-hidden
-        className="mb-1 flex h-14 w-14 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#7B66DC] to-[#5B46C8] shadow-[0_8px_18px_rgba(91,70,200,0.3)]"
-      >
-        <span className="h-3 w-1.5 rounded-full bg-white" />
-        <span className="h-3 w-1.5 rounded-full bg-white" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="mb-1.5 pl-5 text-base font-bold text-[#5B46D6]">{label}</p>
-        <div
-          className={`flex items-center gap-4 rounded-[1.6rem] border-2 bg-white px-5 py-4 text-lg leading-snug text-zinc-800 ${
-            badge ? "border-[#8B7ADB]" : "border-[#C9C2EE]"
-          }`}
-        >
-          {badge}
-          <div className="min-w-0 flex-1 space-y-2 whitespace-pre-line">{children}</div>
-        </div>
+    <div className="flex items-start gap-3">
+      <EddaFace />
+      <div className="flex min-w-0 flex-1 items-center gap-3 pt-1.5 text-[15px] leading-snug text-zinc-800">
+        {badge}
+        <div className="min-w-0 flex-1 space-y-1.5 whitespace-pre-line">{children}</div>
       </div>
     </div>
   );
@@ -1402,50 +1579,5 @@ function CorrectMark({ small = false }: { small?: boolean }) {
     >
       <Check size={small ? 15 : 20} strokeWidth={3} />
     </span>
-  );
-}
-
-// ============================================================================
-// Översikt över lektionen (visas i textkortet när det inte finns någon text)
-// ============================================================================
-
-function LessonOverview({ currentPart }: { currentPart: number }) {
-  const items = [
-    ...PARTS.map((p) => ({ part: p.part, title: p.title })),
-    { part: 5, title: "Slutdiagnos: lång text utan stöd" },
-  ];
-  return (
-    <div className="space-y-5">
-      <h3 className="font-serif text-2xl text-zinc-800">Så här går lektionen till</h3>
-      <ol className="space-y-3">
-        {items.map((it) => (
-          <li
-            key={it.part}
-            className={`flex items-start gap-3 text-base ${
-              it.part < currentPart
-                ? "text-zinc-400"
-                : it.part === currentPart
-                  ? "text-zinc-900 font-semibold"
-                  : "text-zinc-600"
-            }`}
-          >
-            <span
-              className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                it.part === currentPart ? "bg-[#3B62E3] text-white" : "bg-zinc-100"
-              }`}
-            >
-              {it.part < currentPart ? "✓" : it.part}
-            </span>
-            <span>{it.title}</span>
-          </li>
-        ))}
-      </ol>
-      <p className="text-sm text-zinc-500 leading-relaxed">
-        I varje del: <strong>1. Modellering</strong> (Edda tänker högt och visar ett bra exempel)
-        → <strong>2. Träna själv</strong> (med ledtrådar om du behöver) →{" "}
-        <strong>3. Återkalla utan stöd</strong>. Texterna börjar korta och blir längre ju säkrare
-        du blir.
-      </p>
-    </div>
   );
 }

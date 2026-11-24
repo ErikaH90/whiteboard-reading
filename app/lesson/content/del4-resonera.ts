@@ -79,11 +79,21 @@ export const DEL4: PartDefinition = {
     example: {
       kind: "choice",
       category: "resonera",
-      prompt:
-        "Så här ser ett bra svar ut. Frågan var: 'Vilka nackdelar kan fyradagarsvecka ha?'\n\nSvar A: 'Det finns nackdelar, till exempel för föräldrar.'\n\nSvar B: 'En nackdel är att skoldagarna blir längre, eftersom eleverna ska hinna lika mycket på fyra dagar. Det leder till att vissa elever är helt slut när de kommer hem, vilket kan göra det svårare att orka med läxor och fritid.'\n\nVilket svar är ett utvecklat resonemang med stöd i texten?",
+      prompt: "Vilket svar är ett utvecklat resonemang?",
+      // Edda säger uppgiften. På tavlan står bara frågan och svaren.
+      say:
+        "Frågan var: vilka nackdelar kan fyradagarsvecka ha? Läs båda svaren. Vilket är ett utvecklat resonemang med stöd i texten?",
       options: [
-        { id: "A", text: "Svar A", isCorrect: false },
-        { id: "B", text: "Svar B", isCorrect: true },
+        {
+          id: "A",
+          text: "Det finns nackdelar, till exempel för föräldrar.",
+          isCorrect: false,
+        },
+        {
+          id: "B",
+          text: "En nackdel är att skoldagarna blir längre, eftersom eleverna ska hinna lika mycket på fyra dagar. Det leder till att vissa elever är helt slut när de kommer hem, vilket kan göra det svårare att orka med läxor och fritid.",
+          isCorrect: true,
+        },
       ],
       correctFeedback:
         "Rätt! Svar B har belägg ur texten, en förklaring (eftersom) och en följd i flera led (det leder till, vilket kan). Svar A är bara ett påstående utan stöd.",

@@ -58,11 +58,21 @@ export const DEL2: PartDefinition = {
     example: {
       kind: "choice",
       category: "mellan_raderna",
-      prompt:
-        "Så här ser ett bra svar ut. Frågan var: 'Vad vill skribenten antyda med exemplet från skolan?'\n\nSvar A: 'Att frånvaron nästan halverades.'\n\nSvar B: 'Att en senare skolstart verkar vara bra för elever, eftersom de blev piggare och var borta mindre, fast skribenten inte säger det rakt ut.'\n\nVilket svar läser MELLAN raderna?",
+      prompt: "Vilket svar läser mellan raderna?",
+      // Edda säger uppgiften. På tavlan står bara frågan och svaren.
+      say:
+        "Frågan var: vad vill skribenten antyda med exemplet från skolan? Läs båda svaren. Vilket läser mellan raderna?",
       options: [
-        { id: "A", text: "Svar A", isCorrect: false },
-        { id: "B", text: "Svar B", isCorrect: true },
+        {
+          id: "A",
+          text: "Att frånvaron nästan halverades.",
+          isCorrect: false,
+        },
+        {
+          id: "B",
+          text: "Att en senare skolstart verkar vara bra för elever, eftersom de blev piggare och var borta mindre, fast skribenten inte säger det rakt ut.",
+          isCorrect: true,
+        },
       ],
       correctFeedback:
         "Rätt! Svar A återger bara fakta som står i texten (på raderna). Svar B drar en slutsats och stöder den med textens ledtrådar (mellan raderna).",

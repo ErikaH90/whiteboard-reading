@@ -79,8 +79,10 @@ export const DEL3: PartDefinition = {
     example: {
       kind: "choice",
       category: "sammanfatta",
-      prompt:
-        "Så här ser en bra sammanfattning ut, och så här ser två svagare ut. Vilken sammanfattning fångar textens kärna bäst?",
+      prompt: "Vilken sammanfattning fångar textens kärna bäst?",
+      // Edda säger uppgiften. På tavlan står bara frågan och svaren.
+      say:
+        "Här är tre sammanfattningar av texten. Läs dem. Vilken fångar textens kärna bäst?",
       options: [
         {
           id: "A",

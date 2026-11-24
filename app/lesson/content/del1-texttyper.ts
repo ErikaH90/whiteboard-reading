@@ -72,11 +72,21 @@ export const DEL1: PartDefinition = {
     example: {
       kind: "choice",
       category: "texttyp",
-      prompt:
-        "Så här ser ett bra svar ut. Två elever svarade på frågan 'Vilken texttyp är det och hur vet du det?'\n\nSvar A: 'Det är en insändare för att skribenten verkar arg.'\n\nSvar B: 'Det är en insändare. Skribenten driver en tes (\"Vi kräver att beslutet rivs upp\"), ger argument och använder värdeladdade ord som \"svek\".'\n\nVilket svar visar bäst att eleven kan texttypens särdrag?",
+      prompt: "Vilket svar visar bäst vilken texttyp det är?",
+      // Edda säger uppgiften. På tavlan står bara frågan och svaren.
+      say:
+        "Två elever svarade på frågan: vilken texttyp är det, och hur vet du det? Läs båda svaren. Vilket visar bäst att eleven kan texttypens särdrag?",
       options: [
-        { id: "A", text: "Svar A", isCorrect: false },
-        { id: "B", text: "Svar B", isCorrect: true },
+        {
+          id: "A",
+          text: "Det är en insändare för att skribenten verkar arg.",
+          isCorrect: false,
+        },
+        {
+          id: "B",
+          text: "Det är en insändare. Skribenten driver en tes (\"Vi kräver att beslutet rivs upp\"), ger argument och använder värdeladdade ord som \"svek\".",
+          isCorrect: true,
+        },
       ],
       correctFeedback:
         "Rätt! Svar B säger vilken texttyp det är OCH bevisar det med konkreta drag ur texten: tes, argument och värdeladdade ord. Så ser ett starkt svar ut.",
