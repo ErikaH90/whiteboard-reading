@@ -29,6 +29,7 @@ import {
   type Quality,
 } from "./lesson/progress";
 import { LevelWedge, ReadingMapChart, ReadingMapLegend } from "./lesson/ui/ReadingMapChart";
+import { ReadingSettings, readingStyle, useReadingPrefs } from "./lesson/ui/ReadingSettings";
 import type {
   ChoiceTask,
   Interest,
@@ -243,6 +244,10 @@ export default function CompleteWhiteboardSystem() {
     step.leveled && step.textKey ? (textLevels[step.textKey] ?? adaptState.level) : 1;
   const paragraphs = step.text ? paragraphsFor(step.text, stepLevel) : [];
 
+  // Elevens egna läsinställningar: storlek, radavstånd, typsnitt, bakgrund, tempo
+  const [prefs, setPrefs] = useReadingPrefs();
+  const look = readingStyle(prefs);
+
   // Rutans tillstånd
   const [boardStage, setBoardStage] = useState<
     "listening_blank" | "active_task" | "showing_feedback"
@@ -325,7 +330,7 @@ export default function CompleteWhiteboardSystem() {
     }
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "sv-SE";
-    utterance.rate = 0.95;
+    utterance.rate = 0.95 * look.rate;
     utterance.onend = () => {
       setIsPlayingAudio(false);
       onDone();
@@ -354,6 +359,7 @@ export default function CompleteWhiteboardSystem() {
 
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
+      audio.playbackRate = look.rate;
       audioUrlRef.current = url;
       audioRef.current = audio;
       audio.onended = () => {
@@ -1216,7 +1222,7 @@ export default function CompleteWhiteboardSystem() {
                       onClick={handleDictationToggle}
                       aria-label={isRecording ? "Avsluta högläsning" : "Starta högläsning"}
                       className={`h-12 w-12 shrink-0 rounded-full flex items-center justify-center text-white transition shadow-lg ${
-                        isRecording ? "bg-red-600 animate-pulse" : "bg-[#3B62E3] hover:bg-[#2F52C9]"
+                        isRecording ? "bg-red-600 animate-pulse motion-reduce:animate-none" : "bg-[#3B62E3] hover:bg-[#2F52C9]"
                       }`}
                     >
                       {isRecording ? <MicOff size={22} /> : <Mic size={22} />}
@@ -1244,7 +1250,7 @@ export default function CompleteWhiteboardSystem() {
 
                 {task.kind === "result" &&
                   (diagPending ? (
-                    <p className={`${BODY} animate-pulse`}>Edda rättar din slutdiagnos...</p>
+                    <p className={`${BODY} animate-pulse motion-reduce:animate-none`}>Edda rättar din slutdiagnos...</p>
                   ) : (
                     <div className="space-y-4">
                       {mapPanel}
@@ -1307,10 +1313,13 @@ export default function CompleteWhiteboardSystem() {
   );
 
   return (
-    <main className="min-h-screen bg-white flex flex-col select-none antialiased text-zinc-900">
+    <main
+      style={{ backgroundColor: look.background }}
+      className="min-h-screen flex flex-col select-none antialiased text-zinc-900 transition-colors"
+    >
 
       {/* SIDHUVUD: titel, del och progression */}
-      <header className="border-b border-zinc-100 bg-white px-4 sm:px-8 lg:px-12 py-4 flex flex-wrap items-center gap-x-10 gap-y-3">
+      <header className="border-b border-black/5 px-4 sm:px-8 lg:px-12 py-4 flex flex-wrap items-center gap-x-10 gap-y-3">
         <div className="shrink-0">
           <h1 className="text-xl font-bold leading-tight text-zinc-900">Läsförståelse</h1>
           <p className="text-sm text-zinc-500">
@@ -1338,8 +1347,9 @@ export default function CompleteWhiteboardSystem() {
             />
           ))}
         </div>
-        <div className="flex shrink-0 items-center gap-5">
+        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
           <ReadingMapChart map={readingMap} mini />
+          <ReadingSettings prefs={prefs} onChange={setPrefs} />
           <button
             onClick={toggleSound}
             aria-pressed={audioUnlocked}
@@ -1373,12 +1383,17 @@ export default function CompleteWhiteboardSystem() {
                 )}
               </div>
 
-              <h2 className="mb-6 font-serif text-3xl leading-tight text-zinc-900 sm:text-4xl">
+              <h2 className={`mb-6 text-3xl leading-tight text-zinc-900 sm:text-4xl ${look.fontClass}`}>
                 {step.text.title}
               </h2>
               <div
                 ref={readingRef}
-                className="space-y-5 font-serif text-lg leading-[1.8] text-zinc-800 select-text sm:text-[19px]"
+                style={look.text}
+                className={`space-y-5 text-zinc-800 select-text ${look.fontClass} ${
+                  prefs.focus
+                    ? "[&>div>p]:opacity-35 [&>div>p]:transition-opacity [&>div:hover>p]:opacity-100 [&>div:has([data-current])>p]:opacity-100"
+                    : ""
+                }`}
               >
                 {paragraphs.map((p, i) => (
                   <div key={i} className="relative">
@@ -1412,6 +1427,7 @@ export default function CompleteWhiteboardSystem() {
                     {anchor === i && (
                       <aside
                         ref={popupRef}
+                        style={{ zoom: look.zoom }}
                         className={`${POPUP} relative mt-4 lg:absolute lg:left-full lg:top-0 lg:ml-10 lg:mt-0 lg:w-[380px]`}
                       >
                         <span
@@ -1426,7 +1442,7 @@ export default function CompleteWhiteboardSystem() {
               </div>
             </div>
             {anchor < 0 && (
-              <aside ref={popupRef} className={`${POPUP} mt-8 lg:sticky lg:top-6 lg:mt-[88px]`}>
+              <aside ref={popupRef} style={{ zoom: look.zoom }} className={`${POPUP} mt-8 lg:sticky lg:top-6 lg:mt-[88px]`}>
                 {panel}
               </aside>
             )}
@@ -1434,7 +1450,7 @@ export default function CompleteWhiteboardSystem() {
         ) : task.kind === "map" || task.kind === "result" ? (
           <div className="mx-auto max-w-3xl space-y-4">{panel}</div>
         ) : (
-          <section ref={popupRef} className={`${POPUP} mx-auto mt-6 max-w-xl`}>
+          <section ref={popupRef} style={{ zoom: look.zoom }} className={`${POPUP} mx-auto mt-6 max-w-xl`}>
             {panel}
           </section>
         )}
@@ -1458,7 +1474,7 @@ const OPTION =
   "flex w-full items-start gap-2.5 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-left text-[15px] leading-snug text-zinc-900 transition hover:border-[#3B62E3] hover:bg-[#F5F7FE]";
 /** Eddas lilla ruta intill texten. */
 const POPUP =
-  "space-y-3 rounded-2xl border border-zinc-200 bg-white p-5 font-sans text-base leading-snug text-zinc-900 shadow-[0_12px_40px_rgba(40,40,80,0.12)] select-none";
+  "space-y-3 rounded-2xl border border-zinc-200 bg-white p-5 font-sans text-base leading-snug tracking-normal [word-spacing:normal] text-zinc-900 shadow-[0_12px_40px_rgba(40,40,80,0.12)] select-none";
 
 function phaseHeading(step: LessonStep): string {
   switch (step.phase) {
@@ -1490,7 +1506,7 @@ function TalkingDots() {
       {[0, 150, 300].map((delay) => (
         <span
           key={delay}
-          className="h-2.5 w-2.5 rounded-full bg-[#8B7ADB] animate-pulse"
+          className="h-2.5 w-2.5 rounded-full bg-[#8B7ADB] animate-pulse motion-reduce:animate-none"
           style={{ animationDelay: `${delay}ms` }}
         />
       ))}
@@ -1501,7 +1517,7 @@ function TalkingDots() {
 /** Eddas ordförklaring, direkt under stycket där ordet står. */
 function WordExplanation({ note, onClose }: { note: WordNote; onClose: () => void }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border-2 border-[#FDE047] bg-white px-4 py-2.5 font-sans text-base text-zinc-800">
+    <div className="flex items-center gap-3 rounded-xl border-2 border-[#FDE047] bg-white px-4 py-2.5 font-sans leading-snug text-zinc-800">
       {note.status === "loading" || note.status === "speaking" ? (
         <TalkingDots />
       ) : note.status === "error" ? (
