@@ -306,6 +306,7 @@ export default function CompleteWhiteboardSystem() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const playTokenRef = useRef(0);
+  const utterancesRef = useRef<SpeechSynthesisUtterance[]>([]);
 
   function stopAudio() {
     playTokenRef.current++; // ogiltigförklara pågående hämtningar
@@ -323,21 +324,51 @@ export default function CompleteWhiteboardSystem() {
     }
   }
 
+  /**
+   * Reservröst när ElevenLabs inte svarar. Texten läses mening för mening, och en
+   * vakt avslutar uppläsningen om webbläsaren tystnar utan att säga till – annars
+   * blir eleven stående på en sida som väntar på ett slut som aldrig kommer.
+   */
   function playWithBrowserVoice(text: string, onDone: () => void) {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setIsPlayingAudio(false);
-      onDone();
-      return;
-    }
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "sv-SE";
-    utterance.rate = 0.95 * look.rate;
-    utterance.onend = () => {
+    const token = playTokenRef.current;
+    let finished = false;
+    const watch: { id?: ReturnType<typeof setInterval> } = {};
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (watch.id) clearInterval(watch.id);
+      utterancesRef.current = [];
+      if (token !== playTokenRef.current) return; // avbruten: någon annan har tagit över
       setIsPlayingAudio(false);
       onDone();
     };
-    utterance.onerror = () => setIsPlayingAudio(false);
-    window.speechSynthesis.speak(utterance);
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      finish();
+      return;
+    }
+    const synth = window.speechSynthesis;
+    const parts = text.match(/[^.!?…]+[.!?…]*\s*/g)?.map((p) => p.trim()).filter(Boolean) ?? [];
+    if (parts.length === 0) {
+      finish();
+      return;
+    }
+    // Webbläsaren kan tappa bort upplästa meningar som ingen håller i
+    utterancesRef.current = parts.map((part, i) => {
+      const utterance = new SpeechSynthesisUtterance(part);
+      utterance.lang = "sv-SE";
+      utterance.rate = 0.95 * look.rate;
+      if (i === parts.length - 1) utterance.onend = finish;
+      utterance.onerror = finish;
+      return utterance;
+    });
+    utterancesRef.current.forEach((u) => synth.speak(u));
+
+    let silent = 0;
+    watch.id = setInterval(() => {
+      if (token !== playTokenRef.current) return finish();
+      silent = synth.speaking || synth.pending ? 0 : silent + 1;
+      if (silent >= 3) finish();
+    }, 500);
   }
 
   async function playText(text: string, onDone: () => void) {
