@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import {
@@ -560,7 +561,7 @@ export default function CompleteWhiteboardSystem() {
     );
     setBoardHistory((prev) => [
       ...prev,
-      { sender: "student", text: `${choice.emoji} ${choice.label}` },
+      { sender: "student", text: choice.label },
       {
         sender: "teacher",
         tone: "feedback",
@@ -1149,15 +1150,25 @@ export default function CompleteWhiteboardSystem() {
 
                 {/* START: välj intresse */}
                 {task.kind === "interest" && boardStage === "active_task" && (
-                  <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
                     {INTERESTS.map((i) => (
                       <button
                         key={i.id}
                         onClick={() => handleInterestSelect(i.id)}
-                        className={OPTION}
+                        className="group flex items-center gap-3 overflow-hidden rounded-xl border border-zinc-200 text-left transition hover:border-[#3B62E3] hover:shadow-md sm:block"
                       >
-                        <span>{i.emoji}</span>
-                        <span>{i.label}</span>
+                        <span className="relative block aspect-[4/3] w-28 shrink-0 overflow-hidden bg-zinc-100 sm:w-full">
+                          <Image
+                            src={i.image}
+                            alt=""
+                            fill
+                            sizes="(max-width: 640px) 112px, 180px"
+                            className="object-cover transition duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                          />
+                        </span>
+                        <span className="block text-[15px] font-medium leading-snug text-zinc-900 sm:px-3 sm:py-2.5">
+                          {i.label}
+                        </span>
                       </button>
                     ))}
                   </div>

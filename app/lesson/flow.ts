@@ -15,10 +15,11 @@ import type {
 
 export const PARTS: PartDefinition[] = [DEL1, DEL2, DEL3, DEL4];
 
-export const INTERESTS: { id: Interest; label: string; emoji: string }[] = [
-  { id: "sport", label: "Sport & träning", emoji: "⚽" },
-  { id: "gaming", label: "Gaming & teknik", emoji: "🎮" },
-  { id: "natur", label: "Djur & natur", emoji: "🌿" },
+/** Fotona är fria (CC0/public domain) från Wikimedia Commons, se public/intressen/KALLOR.md. */
+export const INTERESTS: { id: Interest; label: string; image: string }[] = [
+  { id: "sport", label: "Sport & träning", image: "/intressen/sport.jpg" },
+  { id: "gaming", label: "Gaming & teknik", image: "/intressen/gaming.jpg" },
+  { id: "natur", label: "Djur & natur", image: "/intressen/natur.jpg" },
 ];
 
 export const CATEGORY_LABELS: Record<QuestionCategory, string> = {
